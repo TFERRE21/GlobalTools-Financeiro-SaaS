@@ -1,18 +1,5 @@
 (()=>{"use strict";
 /* Captura as ações de cadastro antes de qualquer outra rotina do painel. */
-/* Dispara explicitamente os salvamentos pelo clique, mesmo se o evento submit nativo falhar. */
-document.addEventListener("click",function(event){
- const target=event.target instanceof Element?event.target:null;if(!target)return;
- const button=target.closest('#accountForm button[type="submit"],#cardForm button[type="submit"],#costCenterForm button[type="submit"],#payableForm button[type="submit"]');
- if(!button)return;
- event.preventDefault();
- event.stopImmediatePropagation();
- const form=button.closest("form");
- const kind={accountForm:"account",cardForm:"card",costCenterForm:"costcenter",payableForm:"payable"}[form?.id];
- if(!form||!kind){console.error("Formulário de cadastro não identificado");return;}
- if(typeof saveManagedForm!=="function"){const box=document.getElementById("message");if(box){box.textContent="O módulo de gravação não carregou. Atualize a página com Ctrl+F5.";box.className="notice";box.classList.remove("hidden");}return;}
- saveManagedForm({preventDefault:function(){},currentTarget:form},kind);
-},true);
 /* Impede navegação/reload acidental quando qualquer formulário financeiro é enviado. */
 document.addEventListener("submit",function(event){
  const form=event.target;
