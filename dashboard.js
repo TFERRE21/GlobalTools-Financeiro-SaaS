@@ -1,5 +1,12 @@
 (()=>{"use strict";
 /* Captura as ações de cadastro antes de qualquer outra rotina do painel. */
+/* Impede navegação/reload acidental quando qualquer formulário financeiro é enviado. */
+document.addEventListener("submit",function(event){
+ const form=event.target;
+ if(form instanceof HTMLFormElement && ["entryForm","accountForm","cardForm","costCenterForm","payableForm"].includes(form.id)){
+   event.preventDefault();
+ }
+},true);
 document.addEventListener("click",function(event){
  const el=event.target instanceof Element?event.target:null;if(!el)return;
  const button=el.closest("#newAccount,#newCard,#newCostCenter,#newPayable,#newEntry,[data-cancel-form]");
