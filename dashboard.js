@@ -231,4 +231,20 @@ document.addEventListener('click',function(ev){
  }
 },true);
 
+/* Navegação delegada de emergência: mantém o menu funcional mesmo se um módulo falhar. */
+document.addEventListener('click',function(ev){
+ const target=ev.target instanceof Element?ev.target:null;if(!target)return;
+ const nav=target.closest('[data-view],[data-go]');
+ if(!nav)return;
+ const key=nav.dataset.view||nav.dataset.go;
+ const valid=['overview','transactions','accounts','cards','costcenters','payables','alerts','categories','reports','export','billing','account'];
+ if(!valid.includes(key))return;
+ ev.preventDefault();
+ document.querySelectorAll('.view').forEach(el=>el.classList.toggle('active',el.id==='view-'+key));
+ document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===key));
+ const titles={overview:['Visão geral','Resumo da sua vida financeira.'],transactions:['Lançamentos','Registre e gerencie entradas e despesas.'],accounts:['Contas financeiras','Gerencie bancos, caixas e saldos iniciais.'],cards:['Cartões de crédito','Gerencie cartões e limites.'],costcenters:['Centros de custo','Organize receitas e despesas por área.'],payables:['Contas a pagar','Controle vencimentos e pagamentos.'],alerts:['Alertas','Acompanhe contas próximas do vencimento.'],categories:['Categorias','Acompanhe os valores por categoria.'],reports:['Relatórios','Filtre e analise seu período financeiro.'],export:['Exportar dados','Baixe seus registros em CSV.'],billing:['Assinatura e pagamentos','Gerencie seu plano e cobrança.'],account:['Minha conta','Dados da conta e situação do plano.']};
+ const title=document.getElementById('pageTitle'),sub=document.getElementById('pageSub'),notice=document.getElementById('message');
+ if(title&&titles[key])title.textContent=titles[key][0];if(sub&&titles[key])sub.textContent=titles[key][1];
+ if(notice){notice.classList.add('hidden');notice.textContent='';}
+},true);
 init().then(()=>{if(new URLSearchParams(location.search).get("billing")==="subscribe")runBillingAction("checkout")}).catch(e=>{console.error(e);const text="Não foi possível carregar os dados financeiros: "+(e?.message||String(e))+" — verifique a conexão/permissões do Supabase e atualize a página.";const box=$("#loadError");if(box){box.textContent=text;box.classList.remove("hidden")}msg(text,true);$("#sidePlan").textContent="Plano indisponível";$("#userEmail").textContent=session?.user?.email||"Falha de conexão";})})();
