@@ -67,24 +67,38 @@ create table if not exists public.stripe_webhook_events (
 -- SECURITY DEFINER helpers avoid recursive RLS between companies and company_members.
 create or replace function public.is_company_member(p_company_id uuid)
 returns boolean language sql stable security definer set search_path = public
-as $
+as $function$
   select exists (
     select 1 from public.company_members m
     where m.company_id = p_company_id and m.user_id = auth.uid()
   );
-$;
+$function$;
+
 create or replace function public.is_company_owner(p_company_id uuid)
 returns boolean language sql stable security definer set search_path = public
-as $
+as $function$
   select exists (
     select 1 from public.companies c
     where c.id = p_company_id and c.owner_id = auth.uid()
   );
-$;
+$function$;
+
+create or replace function public.can_edit_company(p_company_id uuid)
+returns boolean language sql stable security definer set search_path = public
+as $function$
+  select public.is_company_owner(p_company_id) or exists (
+    select 1 from public.company_members m
+    where m.company_id = p_company_id and m.user_id = auth.uid()
+      and m.role in ('owner','admin','member')
+  );
+$function$;
+
 revoke all on function public.is_company_member(uuid) from public;
 revoke all on function public.is_company_owner(uuid) from public;
+revoke all on function public.can_edit_company(uuid) from public;
 grant execute on function public.is_company_member(uuid) to authenticated;
 grant execute on function public.is_company_owner(uuid) to authenticated;
+grant execute on function public.can_edit_company(uuid) to authenticated;
 
 alter table public.profiles enable row level security;
 alter table public.companies enable row level security;
@@ -117,13 +131,13 @@ create policy "company members read transactions" on public.transactions
   for select to authenticated using (public.is_company_member(company_id) or public.is_company_owner(company_id));
 create policy "company members create transactions" on public.transactions
   for insert to authenticated with check (
-    created_by = auth.uid() and (public.is_company_member(company_id) or public.is_company_owner(company_id))
+    created_by = auth.uid() and public.can_edit_company(company_id)
   );
 create policy "company members update transactions" on public.transactions
   for update to authenticated using (
-    public.is_company_member(company_id) or public.is_company_owner(company_id)
+    public.can_edit_company(company_id)
   ) with check (
-    public.is_company_member(company_id) or public.is_company_owner(company_id)
+    public.can_edit_company(company_id)
   );
 create policy "company admins delete transactions" on public.transactions
   for delete to authenticated using (public.is_company_owner(company_id) or exists (
