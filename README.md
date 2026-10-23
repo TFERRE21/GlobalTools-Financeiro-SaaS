@@ -22,11 +22,16 @@ Acesse http://localhost:8080.
 ## Configuração comercial
 Edite `config.js` para definir nome do produto, URL pública, preço e URL do checkout. Use URLs reais do site e do provedor de pagamentos; não coloque chaves secretas no front-end.
 
+## Publicação do backend
+Foi adicionado `.github/workflows/deploy-worker.yml`, que permite publicar manualmente o Worker depois de cadastrar secrets no GitHub. Ele não foi executado porque depende de credenciais da conta Cloudflare e das chaves de teste do Stripe/Supabase. Abra Settings → Secrets and variables → Actions e cadastre: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `STRIPE_SECRET_KEY` (sk_test), `STRIPE_PRICE_ID` (price de teste ativo), `STRIPE_WEBHOOK_SECRET` (endpoint de teste), `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY`. Não coloque esses valores em arquivos nem no chat. Depois execute Actions → Deploy billing Worker → Run workflow.
+
 ## Publicação GitHub Pages
 
 O workflow falhou porque o site Pages ainda não estava habilitado no repositório. O workflow foi atualizado com `enablement: true` para tentar habilitar Pages automaticamente; confirme o próximo run em Actions. Se a organização/conta impedir habilitação via workflow, acesse Settings → Pages e selecione GitHub Actions como fonte.
 
 ## Banco de dados e e-mail em preparação
+
+A tela `conta.html` oferece login/cadastro e o painel tenta sincronizar transações com Supabase quando a URL/chave pública estiverem configuradas. Os valores ainda estão vazios; sem conexão e testes, o app permanece em modo demonstração.
 
 Foi adicionado `supabase/schema.sql` com tabelas iniciais para perfis, empresas, membros, transações e assinaturas, além de políticas RLS e instruções em `supabase/README.md`. Revise e teste as políticas com contas separadas antes de inserir dados reais. A sincronização de assinaturas ainda não foi conectada ao banco.
 
