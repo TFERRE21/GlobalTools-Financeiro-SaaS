@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Entre ou crie sua conta GlobalTools Financeiro.">
+  <meta name="theme-color" content="#0b1220">
+  <title>Entrar ou criar conta | GlobalTools Financeiro</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="config.js" defer></script>
+  <script src="auth.js" defer></script>
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html"><span class="brand-mark">G</span><span>GlobalTools <b>Financeiro</b></span></a>
+  <nav><a href="index.html">Voltar ao site</a></nav>
+</header>
+<main>
+  <section class="section" style="max-width:560px;margin:48px auto">
+    <div class="section-heading"><p class="eyebrow">SUA CONTA</p><h1 id="authTitle">Entrar</h1><p>Faça login ou crie sua conta. O serviço depende da configuração do Supabase.</p></div>
+    <form id="authForm" class="entry-form">
+      <label>E-mail<input type="email" name="email" autocomplete="email" required maxlength="254" placeholder="voce@empresa.com.br"></label>
+      <label>Senha<input type="password" name="password" autocomplete="current-password" minlength="8" required placeholder="Mínimo de 8 caracteres"></label>
+      <label id="nameLabel" hidden>Nome<input type="text" name="fullName" autocomplete="name" maxlength="120" placeholder="Seu nome"></label>
+      <button id="authSubmit" class="button primary wide" type="submit">Entrar</button>
+      <button id="toggleMode" class="button secondary wide" type="button">Criar uma conta</button>
+      <p id="authMessage" role="status" aria-live="polite"></p>
+    </form>
+    <p class="microcopy">Não use dados financeiros reais até que autenticação, banco de dados e permissões tenham sido testados.</p>
+  </section>
+</main>
+<footer><p><a href="privacidade.html">Privacidade</a> · <a href="termos.html">Termos de uso</a></p></footer>
+</body>
+</html>
