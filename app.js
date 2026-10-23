@@ -238,7 +238,7 @@
         checkout.textContent = "Preparando checkout…";
         checkout.setAttribute("aria-disabled", "true");
         const { data, error } = await supabaseClient.functions.invoke("billing", { body: { action: "checkout" } });
-        if (error) throw error;
+        if (error) { let detail = error.message || "Falha na função de cobrança."; try { const response = error.context; if (response && typeof response.json === "function") { const body = await response.json(); if (body?.error) detail = body.error; } } catch (_) {} throw new Error(detail); }
         if (!data?.url) throw new Error(data?.error || "O Stripe não retornou o link de pagamento.");
         window.location.assign(data.url);
       } catch (error) {
