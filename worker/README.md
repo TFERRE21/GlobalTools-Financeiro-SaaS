@@ -41,3 +41,12 @@ Este é um scaffold de integração. **Não está ativado para cobranças reais*
 - `GET /health`
 - `POST /api/create-checkout-session` — JSON opcional: `{"email":"cliente@exemplo.com"}`
 - `POST /api/stripe-webhook` — exclusivo para eventos assinados pelo Stripe.
+
+
+## Autenticação e sincronização de assinaturas
+- O endpoint de Checkout exige um access token Supabase válido e deriva o usuário do endpoint Auth, não de um `user_id` enviado pelo navegador.
+- Antes de criar Checkout, o Worker confirma que o Price está ativo, é BRL 2.990 por mês e que o produto correto também está ativo.
+- Webhooks assinados sincronizam estados de assinatura com a tabela `subscriptions` e gravam IDs de eventos para deduplicação básica.
+- Configure secrets adicionais: `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY`. A chave service role só pode existir no Worker.
+- O site inclui uma tela inicial de login/cadastro, mas permanece inoperante até que URL/chave pública do Supabase e backend sejam configurados.
+- Antes de produção, teste concorrência/idempotência dos webhooks, políticas RLS, cancelamento e ciclo de vida. Só ative um Price depois de validar o fluxo completo em modo de teste.
