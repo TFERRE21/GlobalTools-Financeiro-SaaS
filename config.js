@@ -1,13 +1,13 @@
-/* Configuração não secreta do site. Ajuste antes de publicar. */
+/* Configuração pública do site. Nunca inserir service_role ou segredos aqui. */
 window.GLOBALTOOLS_CONFIG = {
-  productName: "Base Financeira",
-  brandName: "Base Financeira",
+  productName: "Global Tools Financeiro",
+  brandName: "Global Tools Financeiro",
   publicSiteUrl: "https://tferre21.github.io/GlobalTools-Financeiro-SaaS/",
-  checkoutUrl: "", // Link direto opcional; manter vazio ao usar API de checkout.
-  apiBaseUrl: "", // URL do Worker após deploy e teste; vazio mantém a contratação desativada.
-  supabaseUrl: "", // URL do projeto Supabase após conectar o projeto.
-  supabaseAnonKey: "", // Chave pública anon/publishable; nunca usar service_role no navegador.
+  checkoutUrl: "",
+  apiBaseUrl: "",
+  supabaseUrl: "https://pzywcdhmwzkbaotyibti.supabase.co",
+  supabaseAnonKey: "sb_publishable_wAmGHLHPschjICHr-TOy3w_Y_vV60_7",
   priceLabel: "Plano Essencial",
-  priceValue: "R$ 29,90/mês", // Preço inicial proposto; confirmar antes de cobrar.
-  supportEmail: "" // Inserir endereço oficial de suporte.
+  priceValue: "R$ 29,90/mês",
+  supportEmail: ""
 };
