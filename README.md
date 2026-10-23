@@ -1,4 +1,4 @@
-# GlobalTools Financeiro SaaS
+# Base Financeira SaaS
 
 Aplicação inicial para controle financeiro de micro e pequenas empresas, com página de apresentação e painel demonstrativo.
 
@@ -40,7 +40,7 @@ Foi adicionado `email/README.md` com o processo para configurar o Resend. Nenhum
 ## Stripe — produto criado, checkout ainda bloqueado
 
 Na conta Stripe conectada, em **modo de produção**, foi criado o produto e o preço recorrente com ambos **inativos** para evitar compra/cobrança durante a implantação:
-- Produto: `prod_VUjPJEM3mHC3Vd` — GlobalTools Financeiro — Plano Essencial.
+- Produto: `prod_VUjPJEM3mHC3Vd` — Base Financeira — Plano Essencial.
 - Preço: `price_1UTjwXCCSBhBJictoi0sCI1b` — BRL 29,90 por mês.
 - Produto e preço estão com `active=false`; não habilitar até que o ambiente de teste, backend, banco e webhooks sejam validados.
 - O Stripe conectado nesta sessão só expôs a conta em modo live. Ainda é necessário conectar/selecionar o modo de teste para criar e validar o produto de teste separado.
