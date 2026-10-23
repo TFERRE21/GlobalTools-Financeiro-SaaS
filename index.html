@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Organize receitas, despesas e fluxo de caixa da sua pequena empresa com o GlobalTools Financeiro.">
+  <meta name="theme-color" content="#0b1220">
+  <title>GlobalTools Financeiro | Controle financeiro simples</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="config.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="#" aria-label="GlobalTools Financeiro início"><span class="brand-mark">G</span><span>GlobalTools <b>Financeiro</b></span></a>
+  <nav><a href="#recursos">Recursos</a><a href="#como-funciona">Como funciona</a><a class="nav-cta" href="#planos">Conhecer planos</a></nav>
+</header>
+<main>
+  <section class="hero">
+    <div class="hero-copy">
+      <p class="eyebrow">CONTROLE FINANCEIRO PARA PEQUENOS NEGÓCIOS</p>
+      <h1>Seu negócio merece números <span>claros.</span></h1>
+      <p class="hero-lede">Acompanhe entradas, despesas e saldo em um só lugar. Tenha uma visão mais simples do dinheiro da sua empresa e tome decisões com mais confiança.</p>
+      <div class="hero-actions"><a class="button primary" href="#painel">Ver demonstração <span aria-hidden="true">→</span></a><a class="button secondary" href="#recursos">Conhecer recursos</a></div>
+      <p class="microcopy">Demonstração no navegador • Sem integração bancária nesta versão</p>
+    </div>
+    <div class="preview" aria-label="Prévia ilustrativa do painel financeiro">
+      <div class="preview-top"><div><span class="muted small">VISÃO GERAL</span><h3>Resumo financeiro</h3></div><span class="live-dot">DEMO</span></div>
+      <div class="preview-balance"><span>Saldo do período</span><strong>R$ 8.450,00</strong><span class="positive">▲ 12,8% <span class="muted">vs. período anterior</span></span></div>
+      <div class="preview-stats"><div><span>Entradas</span><b>R$ 12.800</b><div class="bar"><i style="width:78%"></i></div></div><div><span>Saídas</span><b>R$ 4.350</b><div class="bar expense"><i style="width:34%"></i></div></div></div>
+      <div class="preview-row"><span class="dot income"></span><span>Pagamento de cliente</span><b>+ R$ 2.400</b></div>
+      <div class="preview-row"><span class="dot expense-dot"></span><span>Fornecedor</span><b class="negative">− R$ 680</b></div>
+      <p class="disclaimer">Valores ilustrativos para demonstração.</p>
+    </div>
+  </section>
+  <section class="trust-strip"><span>✓ Simples de usar</span><span>✓ Visão clara do caixa</span><span>✓ Exportação CSV na demonstração</span></section>
+  <section id="recursos" class="section">
+    <div class="section-heading"><p class="eyebrow">FEITO PARA A ROTINA REAL</p><h2>Mais clareza para cuidar do seu caixa.</h2><p>Organize as movimentações sem depender de planilhas espalhadas.</p></div>
+    <div class="features">
+      <article class="feature"><div class="feature-icon">↗</div><h3>Entradas e saídas</h3><p>Registre vendas, serviços, fornecedores e custos fixos com data e categoria.</p></article>
+      <article class="feature"><div class="feature-icon">▤</div><h3>Resumo financeiro</h3><p>Veja receitas, despesas e saldo do período em uma visão única.</p></article>
+      <article class="feature"><div class="feature-icon">⇩</div><h3>Seus dados em CSV</h3><p>Exporte os lançamentos da demonstração para conferir ou trabalhar em uma planilha.</p></article>
+    </div>
+  </section>
+  <section id="como-funciona" class="section how-section"><div class="section-heading"><p class="eyebrow">SEM COMPLICAÇÃO</p><h2>Comece com o essencial.</h2></div><div class="steps"><div><span>01</span><h3>Registre</h3><p>Adicione entradas e despesas do dia a dia.</p></div><div><span>02</span><h3>Acompanhe</h3><p>Confira os totais e o saldo calculado.</p></div><div><span>03</span><h3>Organize</h3><p>Filtre por tipo e exporte seus registros.</p></div></div></section>
+  <section id="painel" class="section demo-section">
+    <div class="section-heading left"><p class="eyebrow">EXPERIMENTE A DEMONSTRAÇÃO</p><h2>Seu painel financeiro</h2><p>Os registros ficam armazenados localmente neste navegador. Não use informações financeiras reais ou sensíveis nesta versão de demonstração.</p></div>
+    <div class="dashboard">
+      <div class="metrics"><div class="metric"><span>Entradas</span><strong id="totalIncome">R$ 0,00</strong></div><div class="metric"><span>Saídas</span><strong id="totalExpense">R$ 0,00</strong></div><div class="metric"><span>Saldo</span><strong id="totalBalance">R$ 0,00</strong></div></div>
+      <form id="entryForm" class="entry-form">
+        <label>Descrição<input name="description" required maxlength="100" placeholder="Ex.: Serviço prestado"></label>
+        <label>Tipo<select name="type"><option value="income">Entrada</option><option value="expense">Saída</option></select></label>
+        <label>Valor (R$)<input name="amount" type="number" min="0.01" step="0.01" required placeholder="0,00"></label>
+        <label>Data<input name="date" type="date" required></label>
+        <label>Categoria<input name="category" maxlength="50" placeholder="Ex.: Vendas"></label>
+        <button class="button primary" type="submit">Adicionar lançamento</button>
+      </form>
+      <div class="table-toolbar"><h3>Lançamentos</h3><div class="toolbar-actions"><select id="typeFilter" aria-label="Filtrar por tipo"><option value="all">Todos</option><option value="income">Entradas</option><option value="expense">Saídas</option></select><button id="exportCsv" class="button secondary small-button" type="button">Exportar CSV</button><button id="clearData" class="button text-button" type="button">Limpar dados</button></div></div>
+      <div class="table-wrap"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Data</th><th>Tipo</th><th class="numeric">Valor</th><th><span class="sr-only">Ações</span></th></tr></thead><tbody id="entriesBody"><tr><td colspan="6" class="empty">Nenhum lançamento. Adicione o primeiro acima.</td></tr></tbody></table></div>
+      <p class="local-note">⚠ Protótipo: os dados são salvos apenas neste navegador, usando armazenamento local.</p>
+    </div>
+  </section>
+  <section id="planos" class="section pricing-section"><div class="pricing-card"><p class="eyebrow">PRÓXIMO PASSO</p><h2>Controle financeiro sem complicação.</h2><p>A contratação online será habilitada assim que o plano, checkout e assinatura recorrente forem configurados.</p><div class="pricing-price" id="priceLabel">Plano e preço em configuração</div><a id="checkoutLink" class="button primary wide" href="#planos">Avisar quando estiver disponível</a><small id="checkoutNote">Checkout ainda não conectado.</small></div></section>
+</main>
+<footer><div class="brand"><span class="brand-mark">G</span><span>GlobalTools <b>Financeiro</b></span></div><p>Ferramenta de organização financeira. Não substitui contador nem oferece aconselhamento financeiro.</p><div class="footer-links"><a href="privacidade.html">Privacidade</a><a href="termos.html">Termos de uso</a><a href="prospeccao.html">Política de contato comercial</a></div><p class="copyright">© <span id="year"></span> GlobalTools. Todos os direitos reservados.</p></footer>
+</body>
+</html>
