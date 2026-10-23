@@ -36,12 +36,21 @@ function msg(t,err=false){let e=$("#message");e.classList.remove("hidden");e.tex
  ["Salário","income"],["Vendas","income"],["Serviços prestados","income"],["Investimentos","both"],["Outros","both"]
 ];
 async function loadCategoryMaster(){
- const defaults=DEFAULT_CATEGORIES.map(([name,category_type])=>({company_id:companyId,name,category_type,is_default:true}));
- const seed=await db.from("categories").upsert(defaults,{onConflict:"company_id,name,category_type",ignoreDuplicates:true});
- if(seed.error)throw seed.error;
- const result=await db.from("categories").select("id,name,category_type,is_default,created_at").eq("company_id",companyId).order("name");
- if(result.error)throw result.error;
- savedCategories=result.data||[];
+ const defaults=DEFAULT_CATEGORIES.map(([name,category_type])=>({company_id:companyId,name,category_type,is_default:true,created_by:session.user.id}));
+ try{
+  const seed=await db.from("categories").upsert(defaults,{onConflict:"company_id,name,category_type",ignoreDuplicates:true});
+  if(seed.error)console.warn("Categorias sugeridas não puderam ser criadas automaticamente:",seed.error.message);
+ }catch(err){console.warn("Falha ao preparar categorias sugeridas:",err?.message||err)}
+ try{
+  const result=await db.from("categories").select("id,name,category_type,is_default,created_at").eq("company_id",companyId).order("name");
+  if(result.error)throw result.error;
+  savedCategories=result.data||[];
+ }catch(err){
+  console.error("Não foi possível consultar categorias:",err);
+  savedCategories=[];
+  const out=$("#categoryMessage");
+  if(out){out.textContent="Não foi possível carregar categorias salvas: "+(err?.message||String(err));out.classList.remove("hidden");out.classList.add("error")}
+ }
  categories();
 }
 function categories(){
@@ -153,7 +162,7 @@ async function saveManagedForm(e,kind){
    f.reset();$("#payableFormCard").classList.add("hidden");await loadExtras();msg("Conta a pagar cadastrada com sucesso.");
   }
  }catch(err){
-  const detail=err?.message||String(err);msg("Não foi possível salvar: "+detail,true);
+  const detail=err?.message||String(err);msg("Não foi possível salvar: "+(String(detail).includes("cost_centers_company_id_name_key")?"Já existe um centro de custo com esse nome nesta empresa. Confira a lista antes de tentar novamente.":detail),true);
   const box=$("#message");if(box){box.scrollIntoView({behavior:"smooth",block:"center"});box.style.display="block"}
  }finally{if(submit){submit.disabled=false;submit.textContent=oldText||"Salvar"}}
 }
