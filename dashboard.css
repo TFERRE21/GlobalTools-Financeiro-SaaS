@@ -17,3 +17,9 @@
 #categoryMessage{margin-top:12px}
 #categoryMessage.error{color:#9a3412;background:#fff7e8;border-color:#f3d49b}
 @media(max-width:620px){.category-section-head{align-items:flex-start;flex-direction:column}}
+
+/* Fallback de navegação sem JavaScript: links reais e conteúdo alvo */
+.nav-link{display:block;border:0;background:transparent;color:#dce8f7;text-align:left;padding:12px;border-radius:8px;font-size:12px;min-height:40px;text-decoration:none}
+.nav-link.active,.nav-link:hover{background:#285681}
+.view:target{display:block}
+body:has(.view:target) .view.active:not(:target){display:none}
