@@ -64,6 +64,28 @@ create table if not exists public.stripe_webhook_events (
   processed_at timestamptz not null default now()
 );
 
+-- SECURITY DEFINER helpers avoid recursive RLS between companies and company_members.
+create or replace function public.is_company_member(p_company_id uuid)
+returns boolean language sql stable security definer set search_path = public
+as $
+  select exists (
+    select 1 from public.company_members m
+    where m.company_id = p_company_id and m.user_id = auth.uid()
+  );
+$;
+create or replace function public.is_company_owner(p_company_id uuid)
+returns boolean language sql stable security definer set search_path = public
+as $
+  select exists (
+    select 1 from public.companies c
+    where c.id = p_company_id and c.owner_id = auth.uid()
+  );
+$;
+revoke all on function public.is_company_member(uuid) from public;
+revoke all on function public.is_company_owner(uuid) from public;
+grant execute on function public.is_company_member(uuid) to authenticated;
+grant execute on function public.is_company_owner(uuid) to authenticated;
+
 alter table public.profiles enable row level security;
 alter table public.companies enable row level security;
 alter table public.company_members enable row level security;
@@ -79,12 +101,7 @@ create policy "profile owner updates own profile" on public.profiles
   for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
 
 create policy "company members can read company" on public.companies
-  for select to authenticated using (
-    owner_id = auth.uid() or exists (
-      select 1 from public.company_members m
-      where m.company_id = companies.id and m.user_id = auth.uid()
-    )
-  );
+  for select to authenticated using (owner_id = auth.uid() or public.is_company_member(id));
 create policy "authenticated users create own company" on public.companies
   for insert to authenticated with check (owner_id = auth.uid());
 create policy "owner updates company" on public.companies
@@ -93,41 +110,26 @@ create policy "owner deletes company" on public.companies
   for delete to authenticated using (owner_id = auth.uid());
 
 create policy "members read membership in their companies" on public.company_members
-  for select to authenticated using (
-    user_id = auth.uid() or exists (
-      select 1 from public.companies c where c.id = company_members.company_id and c.owner_id = auth.uid()
-    )
-  );
+  for select to authenticated using (user_id = auth.uid() or public.is_company_owner(company_id));
 -- Membership writes intentionally server-managed until invitation/role escalation rules are implemented.
 
 create policy "company members read transactions" on public.transactions
-  for select to authenticated using (exists (
-    select 1 from public.company_members m
-    where m.company_id = transactions.company_id and m.user_id = auth.uid()
-  ) or exists (
-    select 1 from public.companies c
-    where c.id = transactions.company_id and c.owner_id = auth.uid()
-  ));
+  for select to authenticated using (public.is_company_member(company_id) or public.is_company_owner(company_id));
 create policy "company members create transactions" on public.transactions
   for insert to authenticated with check (
-    created_by = auth.uid() and (
-      exists (select 1 from public.company_members m where m.company_id = transactions.company_id and m.user_id = auth.uid() and m.role in ('owner','admin','member'))
-      or exists (select 1 from public.companies c where c.id = transactions.company_id and c.owner_id = auth.uid())
-    )
+    created_by = auth.uid() and (public.is_company_member(company_id) or public.is_company_owner(company_id))
   );
-create policy "company admins update transactions" on public.transactions
+create policy "company members update transactions" on public.transactions
   for update to authenticated using (
-    exists (select 1 from public.company_members m where m.company_id = transactions.company_id and m.user_id = auth.uid() and m.role in ('owner','admin','member'))
-    or exists (select 1 from public.companies c where c.id = transactions.company_id and c.owner_id = auth.uid())
+    public.is_company_member(company_id) or public.is_company_owner(company_id)
   ) with check (
-    exists (select 1 from public.company_members m where m.company_id = transactions.company_id and m.user_id = auth.uid() and m.role in ('owner','admin','member'))
-    or exists (select 1 from public.companies c where c.id = transactions.company_id and c.owner_id = auth.uid())
+    public.is_company_member(company_id) or public.is_company_owner(company_id)
   );
 create policy "company admins delete transactions" on public.transactions
-  for delete to authenticated using (
-    exists (select 1 from public.company_members m where m.company_id = transactions.company_id and m.user_id = auth.uid() and m.role in ('owner','admin'))
-    or exists (select 1 from public.companies c where c.id = transactions.company_id and c.owner_id = auth.uid())
-  );
+  for delete to authenticated using (public.is_company_owner(company_id) or exists (
+    select 1 from public.company_members m
+    where m.company_id = transactions.company_id and m.user_id = auth.uid() and m.role in ('owner','admin')
+  ));
 
 create policy "users read own subscription" on public.subscriptions
   for select to authenticated using (user_id = auth.uid());
