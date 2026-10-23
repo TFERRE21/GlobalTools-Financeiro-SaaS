@@ -219,9 +219,33 @@
     });
     $("#checkoutNote").textContent = "Checkout Stripe via backend. Ative esta configuração somente depois de validar o fluxo em modo de teste.";
   } else {
-    checkout.addEventListener("click", event => {
+    checkout.textContent = "Assinar por R$ 29,90/mês";
+    checkout.href = "conta.html?next=subscribe";
+    checkout.removeAttribute("aria-disabled");
+    $( "#checkoutNote" ).textContent = "Assinatura mensal com pagamento seguro pelo Stripe. Entre ou crie sua conta para continuar.";
+    checkout.addEventListener("click", async event => {
       event.preventDefault();
-      alert("A contratação online continua desativada. Configure e teste o backend Stripe antes de habilitar o checkout.");
+      try {
+        if (!supabaseClient) {
+          window.location.assign("conta.html?next=subscribe");
+          return;
+        }
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (!session?.access_token) {
+          window.location.assign("conta.html?next=subscribe");
+          return;
+        }
+        checkout.textContent = "Preparando checkout…";
+        checkout.setAttribute("aria-disabled", "true");
+        const { data, error } = await supabaseClient.functions.invoke("billing", { body: { action: "checkout" } });
+        if (error) throw error;
+        if (!data?.url) throw new Error(data?.error || "O Stripe não retornou o link de pagamento.");
+        window.location.assign(data.url);
+      } catch (error) {
+        $( "#checkoutNote" ).textContent = "Não foi possível abrir a cobrança: " + (error?.message || "verifique a configuração de produção do Stripe e tente novamente.");
+        checkout.removeAttribute("aria-disabled");
+        checkout.textContent = "Tentar novamente";
+      }
     });
   }
   $("#year").textContent = String(new Date().getFullYear());
