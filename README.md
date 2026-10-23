@@ -22,6 +22,12 @@ Acesse http://localhost:8080.
 ## Configuração comercial
 Edite `config.js` para definir nome do produto, URL pública, preço e URL do checkout. Use URLs reais do site e do provedor de pagamentos; não coloque chaves secretas no front-end.
 
+## Banco de dados e e-mail em preparação
+
+Foi adicionado `supabase/schema.sql` com tabelas iniciais para perfis, empresas, membros, transações e assinaturas, além de políticas RLS e instruções em `supabase/README.md`. Revise e teste as políticas com contas separadas antes de inserir dados reais. A sincronização de assinaturas ainda não foi conectada ao banco.
+
+Foi adicionado `email/README.md` com o processo para configurar o Resend. Nenhuma chave de API foi criada ou incluída no código, e nenhum e-mail comercial foi enviado.
+
 ## Integração Stripe em preparação
 
 Foi adicionado um scaffold de backend em `worker/` para Cloudflare Workers:
