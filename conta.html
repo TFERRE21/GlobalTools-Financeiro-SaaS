@@ -14,19 +14,17 @@
     :root{--auth-gold:#f3b900;--auth-ink:#101b32;--auth-muted:#71809a;--auth-line:#e0e7f1}
     body.auth-page{min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#fff 0,#f7f9fd 54%,#eef3fa 100%);color:var(--auth-ink);display:flex;flex-direction:column}
     .auth-header{width:100%;max-width:1320px;margin:0 auto;padding:15px 5.5%;display:flex;align-items:center;justify-content:space-between}
-    .auth-brand{display:flex;align-items:center;gap:9px;font-size:19px;font-weight:600;letter-spacing:-.6px;color:#10284f}
+    .auth-brand{display:flex;align-items:center;gap:10px;font-size:18px;letter-spacing:-.6px;flex-shrink:0;color:#10284f}
+    .auth-brand-copy{display:flex;flex-direction:column;line-height:1.15}
     .auth-brand b{font-weight:800;color:#163b65}
-    .auth-logo-bars{width:36px;height:36px;display:flex;align-items:flex-end;gap:4px;padding:4px 2px;flex-shrink:0}
-    .auth-logo-bars i{display:block;width:8px;border-radius:4px 4px 0 0}
-    .auth-logo-bars i:nth-child(1){height:15px;background:#08a875}
-    .auth-logo-bars i:nth-child(2){height:23px;background:#1675d1}
-    .auth-logo-bars i:nth-child(3){height:31px;background:#2563eb}
+    .auth-brand-copy small{font-size:8px;letter-spacing:1.2px;color:#5e7190;margin-top:4px}
+    .auth-logo-mark{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:linear-gradient(145deg,#2563eb,#08a875);color:#fff;font-weight:900;box-shadow:0 5px 13px #2563eb24;flex-shrink:0;font-size:20px}
     .auth-back{font-size:12px;color:#2563eb;font-weight:600;padding:10px 0;border-bottom:2px solid #2563eb}
     .auth-main{flex:1;display:grid;place-items:center;padding:22px 18px 44px}
     .auth-card{width:min(100%,460px);background:#fff;border:1px solid #e5eaf2;border-radius:22px;padding:34px 34px 30px;box-shadow:0 24px 70px rgba(23,45,78,.10);position:relative;overflow:hidden}
     .auth-card:before{content:"";height:4px;position:absolute;top:0;left:28px;right:28px;background:linear-gradient(90deg,#f3b900,#ffd84b,#f3b900);border-radius:0 0 5px 5px}
-    .auth-symbol{width:54px;height:54px;margin:0 auto 14px;border-radius:17px;background:linear-gradient(145deg,#ffdf62,#f3b900);color:#17243a;display:grid;place-items:center;box-shadow:0 9px 25px #e7af182e}
-    .auth-symbol svg{width:29px;height:29px}
+    .auth-symbol{width:54px;height:54px;margin:0 auto 14px;border-radius:17px;background:linear-gradient(145deg,#2563eb,#08a875);color:#fff;display:grid;place-items:center;box-shadow:0 9px 25px #2563eb2e;font-size:29px;font-weight:900}
+    .auth-symbol span{line-height:1}
     .auth-title{text-align:center;margin:0;color:#101b32;font-size:27px;line-height:1.25;letter-spacing:-.9px;font-weight:800}
     .auth-subtitle{text-align:center;color:#73819a;font-size:13px;margin:8px 0 23px;line-height:1.6}
     .auth-divider{display:flex;align-items:center;gap:12px;color:#8794a8;font-size:10px;margin:0 0 22px}
@@ -50,7 +48,7 @@
     .auth-security svg{width:13px;height:13px;color:#0a9b70;flex-shrink:0}
     .auth-footer{text-align:center;color:#9aa5b5;font-size:10px;padding:0 18px 20px}
     .auth-footer a{color:#62748e}
-    @media(max-width:520px){.auth-header{padding:14px 16px}.auth-brand{font-size:15px}.auth-logo-bars{width:31px;height:32px}.auth-logo-bars i{width:7px}.auth-main{padding:20px 14px 36px;align-items:start}.auth-card{padding:30px 22px 25px;border-radius:18px}.auth-title{font-size:25px}.auth-subtitle{margin-bottom:20px}.auth-back{font-size:11px}.auth-footer{line-height:1.8}}
+    @media(max-width:520px){.auth-header{padding:14px 16px}.auth-brand{font-size:15px}.auth-logo-mark{width:34px;height:34px}.auth-main{padding:20px 14px 36px;align-items:start}.auth-card{padding:30px 22px 25px;border-radius:18px}.auth-title{font-size:25px}.auth-subtitle{margin-bottom:20px}.auth-back{font-size:11px}.auth-footer{line-height:1.8}}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="config.js" defer></script>
@@ -59,14 +57,14 @@
 <body class="auth-page">
 <header class="auth-header">
   <a class="auth-brand" href="index.html" aria-label="Global Tools Financeiro - página inicial">
-    <span class="auth-logo-bars" aria-hidden="true"><i></i><i></i><i></i></span>
-    <span>Base <b>Financeira</b></span>
+    <span class="auth-logo-mark" aria-hidden="true">B</span>
+    <span class="auth-brand-copy">Base <b>Financeira</b><small>GESTÃO FINANCEIRA INTELIGENTE</small></span>
   </a>
   <a class="auth-back" href="index.html">Voltar ao site</a>
 </header>
 <main class="auth-main">
   <section class="auth-card" aria-labelledby="authTitle">
-    <div class="auth-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 17.5 9 6l4 12 3-7 4 6.5" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="auth-symbol" aria-hidden="true"><span>B</span></div>
     <h1 id="authTitle" class="auth-title">Acesse sua conta</h1>
     <p class="auth-subtitle">Entre para acompanhar suas operações financeiras.</p>
     <div class="auth-divider">ACESSO SEGURO</div>
