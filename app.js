@@ -104,7 +104,7 @@
       checkout.setAttribute("aria-disabled", "true");
       checkout.textContent = "Preparando checkout…";
       try {
-        const response = await fetch(config.apiBaseUrl.replace(/\\/$/, "") + "/api/create-checkout-session", {
+        const response = await fetch(config.apiBaseUrl.replace(/\/$/, "") + "/api/create-checkout-session", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({})
