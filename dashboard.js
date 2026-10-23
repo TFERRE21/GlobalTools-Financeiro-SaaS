@@ -1,23 +1,5 @@
 (()=>{"use strict";
 /* Captura as ações de cadastro antes de qualquer outra rotina do painel. */
-/* Impede navegação/reload acidental quando qualquer formulário financeiro é enviado. */
-document.addEventListener("submit",function(event){
- const form=event.target;
- if(!(form instanceof HTMLFormElement))return;
- const kinds={accountForm:"account",cardForm:"card",costCenterForm:"costcenter",payableForm:"payable"};
- if(kinds[form.id]){
-   event.preventDefault();
-   event.stopImmediatePropagation();
-   if(typeof saveManagedForm==="function"){
-     saveManagedForm({preventDefault:function(){},currentTarget:form},kinds[form.id]);
-   }else{
-     const box=document.getElementById("message");
-     if(box){box.textContent="O módulo de gravação não carregou. Atualize o painel.";box.classList.remove("hidden");box.style.display="block";}
-   }
- }else if(form.id==="entryForm"){
-   event.preventDefault();
- }
-},true);
 document.addEventListener("click",function(event){
  const el=event.target instanceof Element?event.target:null;if(!el)return;
  const button=el.closest("#newAccount,#newCard,#newCostCenter,#newPayable,#newEntry,[data-cancel-form]");
