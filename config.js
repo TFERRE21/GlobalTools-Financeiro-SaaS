@@ -2,7 +2,7 @@
 window.GLOBALTOOLS_CONFIG = {
   productName: "Global Tools Financeiro",
   brandName: "Global Tools Financeiro",
-  publicSiteUrl: "https://tferre21.github.io/GlobalTools-Financeiro-SaaS/",
+  publicSiteUrl: "https://globaltoolsfinanceirosaas.vps11710.panel.icontainer.work/",
   checkoutUrl: "",
   apiBaseUrl: "",
   supabaseUrl: "https://pzywcdhmwzkbaotyibti.supabase.co",
