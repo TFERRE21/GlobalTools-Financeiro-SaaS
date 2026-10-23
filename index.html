@@ -58,7 +58,7 @@
       </form>
       <div class="table-toolbar"><h3>Lançamentos</h3><div class="toolbar-actions"><select id="typeFilter" aria-label="Filtrar por tipo"><option value="all">Todos</option><option value="income">Entradas</option><option value="expense">Saídas</option></select><button id="exportCsv" class="button secondary small-button" type="button">Exportar CSV</button><button id="clearData" class="button text-button" type="button">Limpar dados</button></div></div>
       <div class="table-wrap"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Data</th><th>Tipo</th><th class="numeric">Valor</th><th><span class="sr-only">Ações</span></th></tr></thead><tbody id="entriesBody"><tr><td colspan="6" class="empty">Nenhum lançamento. Adicione o primeiro acima.</td></tr></tbody></table></div>
-      <p class="local-note">⚠ Protótipo: os dados são salvos apenas neste navegador, usando armazenamento local.</p>
+      <p id="storageNote" class="local-note">Demonstração: os dados são salvos apenas neste navegador. Entre na sua conta após a configuração do Supabase para sincronizar seus registros.</p>
     </div>
   </section>
   <section id="planos" class="section pricing-section"><div class="pricing-card"><p class="eyebrow">PRÓXIMO PASSO</p><h2>Controle financeiro sem complicação.</h2><p>A contratação online será habilitada assim que o plano, checkout e assinatura recorrente forem configurados.</p><div class="pricing-price" id="priceLabel">Plano e preço em configuração</div><a id="checkoutLink" class="button primary wide" href="#planos">Avisar quando estiver disponível</a><small id="checkoutNote">Checkout ainda não conectado.</small></div></section>
