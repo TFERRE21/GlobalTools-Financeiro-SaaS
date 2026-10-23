@@ -25,7 +25,7 @@
     return new URL("conta.html", config.publicSiteUrl || window.location.href).toString();
   }
   function goToPanel() {
-    window.location.assign(new URL("index.html", config.publicSiteUrl || window.location.href).toString());
+    window.location.assign(new URL("index.html#painel", config.publicSiteUrl || window.location.href).toString());
   }
 
   $("#toggleMode").addEventListener("click", () => {
