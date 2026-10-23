@@ -1,7 +1,7 @@
 /* Configuração não secreta do site. Ajuste antes de publicar. */
 window.GLOBALTOOLS_CONFIG = {
-  productName: "GlobalTools Financeiro",
-  brandName: "GlobalTools",
+  productName: "Base Financeira",
+  brandName: "Base Financeira",
   publicSiteUrl: "https://tferre21.github.io/GlobalTools-Financeiro-SaaS/",
   checkoutUrl: "", // Link direto opcional; manter vazio ao usar API de checkout.
   apiBaseUrl: "", // URL do Worker após deploy e teste; vazio mantém a contratação desativada.
