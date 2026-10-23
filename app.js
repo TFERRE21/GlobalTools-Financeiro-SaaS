@@ -136,6 +136,33 @@
         company = created.data;
       }
       cloudCompanyId = company.id;
+
+      // Consulta o status da assinatura no banco; o front-end apenas informa o status.
+      // A liberação de recursos pagos precisa também ser validada no backend/webhook.
+      const subscriptionResult = await supabaseClient.from("subscriptions")
+        .select("status,current_period_end,cancel_at_period_end")
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      let planStatus = "não ativo";
+      if (!subscriptionResult.error && subscriptionResult.data) {
+        const sub = subscriptionResult.data;
+        const periodIsValid = !sub.current_period_end || new Date(sub.current_period_end).getTime() > Date.now();
+        if (["active", "trialing"].includes(sub.status) && periodIsValid) {
+          planStatus = sub.status === "trialing" ? "em período de teste" : "ativo";
+        } else if (sub.status === "past_due") {
+          planStatus = "com pagamento pendente";
+        } else if (["canceled", "incomplete_expired", "unpaid", "paused"].includes(sub.status)) {
+          planStatus = "inativo";
+        } else {
+          planStatus = "não ativo";
+        }
+      } else if (subscriptionResult.error) {
+        console.warn("Subscription status could not be checked", subscriptionResult.error);
+        planStatus = "não foi possível verificar";
+      }
+      const planNotice = "Plano: " + planStatus + ". ";
       const result = await supabaseClient.from("transactions")
         .select("id,description,category,transaction_type,amount_cents,transaction_date")
         .eq("company_id", cloudCompanyId).order("transaction_date", { ascending: false });
@@ -144,7 +171,7 @@
         id: row.id, description: row.description, category: row.category || "",
         type: row.transaction_type, amount: Number(row.amount_cents) / 100, date: row.transaction_date
       }));
-      $("#storageNote").textContent = "Dados sincronizados com a conta: " + company.display_name + ".";
+      $("#storageNote").textContent = planNotice + "Dados sincronizados com a conta: " + company.display_name + ".";
       render();
     } catch (error) {
       $("#storageNote").textContent = "A conta está conectada, mas o banco ainda não está pronto: " + (error?.message || "erro de configuração");
