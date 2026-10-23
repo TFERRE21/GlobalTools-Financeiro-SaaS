@@ -48,7 +48,7 @@
       <td><button class="delete-entry" type="button" data-delete="${escapeHtml(x.id)}" aria-label="Excluir ${escapeHtml(x.description)}">Excluir</button></td>
     </tr>`).join("") : '<tr><td colspan="6" class="empty">Nenhum lançamento encontrado.</td></tr>';
   }
-  form.addEventListener("submit", event => {
+  form.addEventListener("submit", async event => {
     event.preventDefault();
     const fd = new FormData(form);
     const description = String(fd.get("description") || "").trim();
@@ -58,19 +58,43 @@
       alert("Informe descrição, data e valor positivo válidos.");
       return;
     }
-    entries.push({id: (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2), description, amount: Math.round(amount*100)/100, date, category: String(fd.get("category") || "").trim(), type: fd.get("type") === "expense" ? "expense" : "income"});
+    const category = String(fd.get("category") || "").trim();
+    const type = fd.get("type") === "expense" ? "expense" : "income";
+    if (cloudMode) {
+      if (!cloudSession || !cloudCompanyId) { alert("Os dados da nuvem ainda não carregaram. Atualize a página ou tente novamente."); return; }
+      const { data, error } = await supabaseClient.from("transactions").insert({
+        company_id: cloudCompanyId, created_by: cloudSession.user.id, description, category,
+        transaction_type: type, amount_cents: Math.round(amount * 100), transaction_date: date
+      }).select("id,description,category,transaction_type,amount_cents,transaction_date").single();
+      if (error) { alert("Não foi possível salvar na nuvem: " + error.message); return; }
+      entries.push({ id: data.id, description: data.description, amount: data.amount_cents / 100, date: data.transaction_date, category: data.category || "", type: data.transaction_type });
+      form.reset(); form.elements.date.value = localDate; render(); return;
+    }
+    entries.push({id: (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2), description, amount: Math.round(amount*100)/100, date, category, type});
     if (saveEntries()) { form.reset(); form.elements.date.value = localDate; render(); }
   });
-  table.addEventListener("click", event => {
+  table.addEventListener("click", async event => {
     const button = event.target.closest("[data-delete]");
     if (!button) return;
+    if (cloudMode) {
+      if (!cloudCompanyId) { alert("A conta ainda não está sincronizada."); return; }
+      const { error } = await supabaseClient.from("transactions").delete().eq("id", button.dataset.delete).eq("company_id", cloudCompanyId);
+      if (error) { alert("Não foi possível excluir na nuvem: " + error.message); return; }
+      entries = entries.filter(x => x.id !== button.dataset.delete); render(); return;
+    }
     entries = entries.filter(x => x.id !== button.dataset.delete);
     if (saveEntries()) render();
   });
   $("#typeFilter").addEventListener("change", render);
-  $("#clearData").addEventListener("click", () => {
+  $("#clearData").addEventListener("click", async () => {
     if (!entries.length) return;
     if (confirm("Apagar todos os lançamentos deste navegador? Esta ação não pode ser desfeita.")) {
+      if (cloudMode) {
+        if (!cloudCompanyId) { alert("A conta ainda não está sincronizada."); return; }
+        const { error } = await supabaseClient.from("transactions").delete().eq("company_id", cloudCompanyId);
+        if (error) { alert("Não foi possível apagar na nuvem: " + error.message); return; }
+        entries = []; render(); return;
+      }
       entries = [];
       if (saveEntries()) render();
     }
@@ -85,6 +109,48 @@
   const supabaseClient = (window.supabase && config.supabaseUrl && config.supabaseAnonKey)
     ? window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey)
     : null;
+  let cloudMode = false;
+  let cloudSession = null;
+  let cloudCompanyId = null;
+
+  async function initCloudData() {
+    if (!supabaseClient) return;
+    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError) { $("#storageNote").textContent = "Não foi possível validar a sessão da conta."; return; }
+    if (!session) {
+      $("#storageNote").textContent = "Demonstração local: entre na sua conta para usar dados sincronizados quando o backend estiver configurado.";
+      return;
+    }
+    cloudMode = true;
+    cloudSession = session;
+    try {
+      let { data: company, error } = await supabaseClient.from("companies")
+        .select("id,display_name").eq("owner_id", session.user.id).limit(1).maybeSingle();
+      if (error) throw error;
+      if (!company) {
+        const created = await supabaseClient.from("companies").insert({
+          owner_id: session.user.id,
+          display_name: (session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "Minha empresa") + " — empresa"
+        }).select("id,display_name").single();
+        if (created.error) throw created.error;
+        company = created.data;
+      }
+      cloudCompanyId = company.id;
+      const result = await supabaseClient.from("transactions")
+        .select("id,description,category,transaction_type,amount_cents,transaction_date")
+        .eq("company_id", cloudCompanyId).order("transaction_date", { ascending: false });
+      if (result.error) throw result.error;
+      entries = (result.data || []).map(row => ({
+        id: row.id, description: row.description, category: row.category || "",
+        type: row.transaction_type, amount: Number(row.amount_cents) / 100, date: row.transaction_date
+      }));
+      $("#storageNote").textContent = "Dados sincronizados com a conta: " + company.display_name + ".";
+      render();
+    } catch (error) {
+      $("#storageNote").textContent = "A conta está conectada, mas o banco ainda não está pronto: " + (error?.message || "erro de configuração");
+      console.error("Cloud data initialization failed", error);
+    }
+  }
   if (config.priceValue) $("#priceLabel").textContent = config.priceValue;
   const checkout = $("#checkoutLink");
   const checkoutState = new URLSearchParams(window.location.search).get("checkout");
@@ -133,4 +199,5 @@
   }
   $("#year").textContent = String(new Date().getFullYear());
   render();
+  initCloudData();
 })();
