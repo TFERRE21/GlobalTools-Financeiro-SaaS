@@ -22,11 +22,23 @@ Acesse http://localhost:8080.
 ## Configuração comercial
 Edite `config.js` para definir nome do produto, URL pública, preço e URL do checkout. Use URLs reais do site e do provedor de pagamentos; não coloque chaves secretas no front-end.
 
+## Publicação GitHub Pages
+
+O workflow falhou porque o site Pages ainda não estava habilitado no repositório. O workflow foi atualizado com `enablement: true` para tentar habilitar Pages automaticamente; confirme o próximo run em Actions. Se a organização/conta impedir habilitação via workflow, acesse Settings → Pages e selecione GitHub Actions como fonte.
+
 ## Banco de dados e e-mail em preparação
 
 Foi adicionado `supabase/schema.sql` com tabelas iniciais para perfis, empresas, membros, transações e assinaturas, além de políticas RLS e instruções em `supabase/README.md`. Revise e teste as políticas com contas separadas antes de inserir dados reais. A sincronização de assinaturas ainda não foi conectada ao banco.
 
 Foi adicionado `email/README.md` com o processo para configurar o Resend. Nenhuma chave de API foi criada ou incluída no código, e nenhum e-mail comercial foi enviado.
+
+## Stripe — produto criado, checkout ainda bloqueado
+
+Na conta Stripe conectada, em **modo de produção**, foi criado o produto e o preço recorrente com ambos **inativos** para evitar compra/cobrança durante a implantação:
+- Produto: `prod_VUjPJEM3mHC3Vd` — GlobalTools Financeiro — Plano Essencial.
+- Preço: `price_1UTjwXCCSBhBJictoi0sCI1b` — BRL 29,90 por mês.
+- Produto e preço estão com `active=false`; não habilitar até que o ambiente de teste, backend, banco e webhooks sejam validados.
+- O Stripe conectado nesta sessão só expôs a conta em modo live. Ainda é necessário conectar/selecionar o modo de teste para criar e validar o produto de teste separado.
 
 ## Integração Stripe em preparação
 
