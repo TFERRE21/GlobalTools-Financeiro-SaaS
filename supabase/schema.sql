@@ -58,6 +58,39 @@ create table if not exists public.subscriptions (
 );
 
 -- Store event IDs to make webhook processing idempotent.
+-- Create a starter profile and default company after verified auth user creation.
+create or replace function public.handle_new_auth_user()
+returns trigger language plpgsql security definer set search_path = public
+as $function$
+declare
+  new_company_id uuid;
+  company_label text;
+begin
+  insert into public.profiles (id, full_name)
+  values (new.id, nullif(new.raw_user_meta_data ->> 'full_name', ''))
+  on conflict (id) do nothing;
+
+  company_label := coalesce(
+    nullif(new.raw_user_meta_data ->> 'full_name', ''),
+    split_part(coalesce(new.email, 'Minha empresa'), '@', 1)
+  ) || ' — empresa';
+
+  insert into public.companies (owner_id, display_name)
+  values (new.id, company_label)
+  returning id into new_company_id;
+
+  insert into public.company_members (company_id, user_id, role)
+  values (new_company_id, new.id, 'owner')
+  on conflict (company_id, user_id) do nothing;
+  return new;
+end;
+$function$;
+
+drop trigger if exists on_auth_user_created_globaltools on auth.users;
+create trigger on_auth_user_created_globaltools
+  after insert on auth.users
+  for each row execute procedure public.handle_new_auth_user();
+
 create table if not exists public.stripe_webhook_events (
   event_id text primary key,
   event_type text not null,
