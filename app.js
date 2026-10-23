@@ -187,6 +187,29 @@
     $("#checkoutNote").textContent = "Checkout cancelado. Nenhuma assinatura deve ser considerada ativa.";
   }
 
+  const pixCheckout = $("#pixCheckoutLink");
+  if (pixCheckout) pixCheckout.addEventListener("click", async () => {
+    const original = pixCheckout.textContent;
+    pixCheckout.disabled = true;
+    pixCheckout.textContent = "Gerando Pix…";
+    try {
+      if (!supabaseClient) throw new Error("O login ainda não está configurado.");
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session?.access_token) { window.location.assign("conta.html?next=subscribe"); return; }
+      const { data, error } = await supabaseClient.functions.invoke("billing", { body: { action: "pix_checkout" } });
+      if (error) {
+        let detail = error.message || "Falha ao iniciar pagamento Pix.";
+        try { const response = error.context; if (response && typeof response.json === "function") { const body = await response.json(); if (body?.error) detail = body.error; } } catch (_) {}
+        throw new Error(detail);
+      }
+      if (!data?.url) throw new Error(data?.error || "O Stripe não retornou o checkout Pix.");
+      window.location.assign(data.url);
+    } catch (error) {
+      $("#checkoutNote").textContent = "Pix indisponível: " + (error?.message || "tente novamente.");
+      pixCheckout.disabled = false;
+      pixCheckout.textContent = original;
+    }
+  });
   if (config.checkoutUrl) {
     checkout.href = config.checkoutUrl;
     checkout.target = "_blank";
