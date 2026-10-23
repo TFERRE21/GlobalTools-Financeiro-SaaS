@@ -22,10 +22,14 @@
     if (clearMessage) setMessage("");
   }
   function accountUrl() {
-    return new URL("conta.html", config.publicSiteUrl || window.location.href).toString();
+    const url = new URL("conta.html", config.publicSiteUrl || window.location.href);
+    url.searchParams.set("next", "subscribe");
+    return url.toString();
   }
-  function goToPanel() {
-    window.location.assign(new URL("index.html#painel", config.publicSiteUrl || window.location.href).toString());
+  function goToPanel(forceSubscribe = false) {
+    const subscribe = forceSubscribe || new URLSearchParams(window.location.search).get("next") === "subscribe";
+    const target = subscribe ? "dashboard.html?billing=subscribe" : "index.html#painel";
+    window.location.assign(new URL(target, config.publicSiteUrl || window.location.href).toString());
   }
 
   $("#toggleMode").addEventListener("click", () => {
@@ -65,7 +69,7 @@
         });
         if (error) throw error;
         if (data.session) {
-          goToPanel();
+          goToPanel(true);
           return;
         }
         setMessage("O Supabase recebeu a solicitação, mas isso não confirma que um e-mail foi enviado. Verifique a caixa de entrada e o spam. Se nada chegar, o administrador precisa conferir o SMTP do Supabase e os limites de envio do Resend.");
