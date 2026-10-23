@@ -94,4 +94,4 @@ document.addEventListener('click',function(ev){
  }
 },true);
 
-init().catch(e=>{console.error(e);const text="Não foi possível carregar os dados financeiros: "+(e?.message||String(e))+" — verifique a conexão/permissões do Supabase e atualize a página.";const box=$("#loadError");if(box){box.textContent=text;box.classList.remove("hidden")}msg(text,true);$("#sidePlan").textContent="Plano indisponível";$("#userEmail").textContent=session?.user?.email||"Falha de conexão";})})();
+init().then(()=>{if(new URLSearchParams(location.search).get("billing")==="subscribe")runBillingAction("checkout")}).catch(e=>{console.error(e);const text="Não foi possível carregar os dados financeiros: "+(e?.message||String(e))+" — verifique a conexão/permissões do Supabase e atualize a página.";const box=$("#loadError");if(box){box.textContent=text;box.classList.remove("hidden")}msg(text,true);$("#sidePlan").textContent="Plano indisponível";$("#userEmail").textContent=session?.user?.email||"Falha de conexão";})})();
