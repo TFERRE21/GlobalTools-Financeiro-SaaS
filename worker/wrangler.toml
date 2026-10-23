@@ -1,0 +1,7 @@
+name = "globaltools-financeiro-billing"
+main = "src/index.js"
+compatibility_date = "2026-10-23"
+
+[vars]
+ALLOWED_ORIGIN = "https://tferre21.github.io"
+PUBLIC_SITE_URL = "https://tferre21.github.io/GlobalTools-Financeiro-SaaS/"
