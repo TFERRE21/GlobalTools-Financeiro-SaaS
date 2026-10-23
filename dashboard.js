@@ -22,4 +22,34 @@ $$('[data-view]').forEach(b=>b.addEventListener('click',()=>view(b.dataset.view)
 $('#payableFilter').addEventListener('change',renderExtras);
 document.addEventListener('click',async e=>{const paid=e.target.closest('[data-paid]');if(paid){if(!confirm('Marcar esta conta como paga?'))return;const r=await db.from('payables').update({status:'paid',paid_at:new Date().toISOString()}).eq('id',paid.dataset.paid).eq('company_id',companyId);if(r.error){msg('Não foi possível marcar como paga: '+r.error.message,true);return}await loadExtras();msg('Conta marcada como paga.');return}const b=e.target.closest('[data-remove]');if(!b)return;const table={account:'financial_accounts',card:'credit_cards',costcenter:'cost_centers',payable:'payables'}[b.dataset.kind];if(!table||!confirm('Excluir este registro?'))return;try{if(b.dataset.kind==='payable'){const {error}=await db.from(table).update({status:'cancelled'}).eq('id',b.dataset.remove).eq('company_id',companyId);if(error)throw error}else{const {error}=await db.from(table).delete().eq('id',b.dataset.remove).eq('company_id',companyId);if(error)throw error}await loadExtras();msg(b.dataset.kind==='payable'?'Conta cancelada.':'Registro excluído.')}catch(err){msg('Não foi possível concluir: '+err.message,true)}});
 const reportHead=$('#view-reports .head');if(reportHead&&!$('#printReport')){const p=document.createElement('button');p.id='printReport';p.className='btn';p.textContent='Imprimir / Salvar PDF';p.addEventListener('click',()=>window.print());reportHead.appendChild(p)}
+
+/* Ações críticas com delegação global: funcionam mesmo se os handlers individuais falharem. */
+document.addEventListener('click',function(ev){
+ const target=ev.target instanceof Element?ev.target:null;if(!target)return;
+ const openMap={
+  newAccount:'#accountFormCard',
+  newCard:'#cardFormCard',
+  newCostCenter:'#costCenterFormCard',
+  newPayable:'#payableFormCard',
+  newEntry:'#formCard'
+ };
+ const opener=target.closest('#newAccount,#newCard,#newCostCenter,#newPayable,#newEntry');
+ if(opener){
+  ev.preventDefault();
+  const panel=$(openMap[opener.id]);
+  if(panel){panel.classList.remove('hidden');panel.style.display='block';panel.scrollIntoView({behavior:'smooth',block:'start'});}
+  if(opener.id==='newPayable'){
+   const form=$('#payableForm');if(form){if(!form.elements.issue_date.value)form.elements.issue_date.value=today;if(!form.elements.due_date.value)form.elements.due_date.value=today;}
+  }
+  if(opener.id==='newEntry'&&typeof openForm==='function'){try{openForm()}catch(err){console.error(err)}}
+ }
+ const cancel=target.closest('[data-cancel-form],#cancelForm');
+ if(cancel){
+  ev.preventDefault();
+  const id=cancel.dataset.cancelForm;
+  const panel=id?$('#'+id):$('#formCard');
+  if(panel){panel.classList.add('hidden');panel.style.display='none';}
+ }
+},true);
+
 init().catch(e=>{console.error(e);const text="Não foi possível carregar os dados financeiros: "+(e?.message||String(e))+" — verifique a conexão/permissões do Supabase e atualize a página.";const box=$("#loadError");if(box){box.textContent=text;box.classList.remove("hidden")}msg(text,true);$("#sidePlan").textContent="Plano indisponível";$("#userEmail").textContent=session?.user?.email||"Falha de conexão";})})();
