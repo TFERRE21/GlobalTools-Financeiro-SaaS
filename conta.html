@@ -6,19 +6,24 @@
   <meta name="description" content="Acesse sua conta Global Tools Financeiro com segurança.">
   <meta name="theme-color" content="#f7f9fc">
   <title>Acessar sua conta | Global Tools Financeiro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <style>
-    :root{--auth-gold:#f3b900;--auth-ink:#101b32;--auth-muted:#71809a;--auth-line:#e0e7f1;--auth-bg:#f6f8fc}
+    :root{--auth-gold:#f3b900;--auth-ink:#101b32;--auth-muted:#71809a;--auth-line:#e0e7f1}
     body.auth-page{min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#fff 0,#f7f9fd 54%,#eef3fa 100%);color:var(--auth-ink);display:flex;flex-direction:column}
-    .auth-header{width:100%;max-width:1180px;margin:0 auto;padding:22px 28px;display:flex;align-items:center;justify-content:space-between}
-    .auth-brand{display:flex;align-items:center;gap:11px;font-size:18px;font-weight:750;letter-spacing:-.5px;color:#132846}
-    .auth-brand-mark{width:38px;height:38px;border-radius:12px;background:linear-gradient(145deg,#f8cf36,#efa900);display:grid;place-items:center;color:#14233b;box-shadow:0 7px 18px #f3b90035}
-    .auth-brand-mark svg{width:22px;height:22px}
-    .auth-brand b{color:#1455a6}
-    .auth-back{font-size:13px;color:#4f6380;font-weight:650;padding:9px 13px;border-radius:9px}
-    .auth-back:hover{background:#edf2f8;color:#164f9c}
-    .auth-main{flex:1;display:grid;place-items:center;padding:26px 18px 56px}
-    .auth-card{width:min(100%,440px);background:#fff;border:1px solid #e5eaf2;border-radius:22px;padding:34px 34px 30px;box-shadow:0 24px 70px rgba(23,45,78,.10);position:relative;overflow:hidden}
+    .auth-header{width:100%;max-width:1320px;margin:0 auto;padding:15px 5.5%;display:flex;align-items:center;justify-content:space-between}
+    .auth-brand{display:flex;align-items:center;gap:9px;font-size:19px;font-weight:600;letter-spacing:-.6px;color:#10284f}
+    .auth-brand b{font-weight:800;color:#163b65}
+    .auth-logo-bars{width:36px;height:36px;display:flex;align-items:flex-end;gap:4px;padding:4px 2px;flex-shrink:0}
+    .auth-logo-bars i{display:block;width:8px;border-radius:4px 4px 0 0}
+    .auth-logo-bars i:nth-child(1){height:15px;background:#08a875}
+    .auth-logo-bars i:nth-child(2){height:23px;background:#1675d1}
+    .auth-logo-bars i:nth-child(3){height:31px;background:#2563eb}
+    .auth-back{font-size:12px;color:#2563eb;font-weight:600;padding:10px 0;border-bottom:2px solid #2563eb}
+    .auth-main{flex:1;display:grid;place-items:center;padding:22px 18px 44px}
+    .auth-card{width:min(100%,460px);background:#fff;border:1px solid #e5eaf2;border-radius:22px;padding:34px 34px 30px;box-shadow:0 24px 70px rgba(23,45,78,.10);position:relative;overflow:hidden}
     .auth-card:before{content:"";height:4px;position:absolute;top:0;left:28px;right:28px;background:linear-gradient(90deg,#f3b900,#ffd84b,#f3b900);border-radius:0 0 5px 5px}
     .auth-symbol{width:54px;height:54px;margin:0 auto 14px;border-radius:17px;background:linear-gradient(145deg,#ffdf62,#f3b900);color:#17243a;display:grid;place-items:center;box-shadow:0 9px 25px #e7af182e}
     .auth-symbol svg{width:29px;height:29px}
@@ -35,6 +40,7 @@
     #authForm .button{width:100%;min-height:49px;border-radius:11px;font-size:13px;font-weight:800}
     #authSubmit{order:4;background:linear-gradient(100deg,#f6c414,#efb300);color:#17243a;border:0;box-shadow:0 7px 17px #e9b41430}
     #authSubmit:hover{background:linear-gradient(100deg,#ffcf25,#f3b900);box-shadow:0 10px 22px #e9b41440}
+    #authSubmit:disabled{opacity:.65;cursor:wait}
     #toggleMode{order:6;border:1px solid #e0e7f1;background:#fff;color:#17243a}
     #toggleMode:hover{background:#f8fafc;border-color:#cbd5e1}
     #authMessage{order:5;margin:0;min-height:0;font-size:12px;line-height:1.5;color:#52647f;text-align:center}
@@ -44,7 +50,7 @@
     .auth-security svg{width:13px;height:13px;color:#0a9b70;flex-shrink:0}
     .auth-footer{text-align:center;color:#9aa5b5;font-size:10px;padding:0 18px 20px}
     .auth-footer a{color:#62748e}
-    @media(max-width:520px){.auth-header{padding:16px 16px}.auth-brand{font-size:15px}.auth-brand-mark{width:34px;height:34px}.auth-main{padding:20px 14px 36px;align-items:start}.auth-card{padding:30px 22px 25px;border-radius:18px}.auth-title{font-size:25px}.auth-subtitle{margin-bottom:20px}.auth-back{font-size:11px}.auth-footer{line-height:1.8}}
+    @media(max-width:520px){.auth-header{padding:14px 16px}.auth-brand{font-size:15px}.auth-logo-bars{width:31px;height:32px}.auth-logo-bars i{width:7px}.auth-main{padding:20px 14px 36px;align-items:start}.auth-card{padding:30px 22px 25px;border-radius:18px}.auth-title{font-size:25px}.auth-subtitle{margin-bottom:20px}.auth-back{font-size:11px}.auth-footer{line-height:1.8}}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="config.js" defer></script>
@@ -53,10 +59,10 @@
 <body class="auth-page">
 <header class="auth-header">
   <a class="auth-brand" href="index.html" aria-label="Global Tools Financeiro - página inicial">
-    <span class="auth-brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 17.5 9 6l4 12 3-7 4 6.5" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-    <span>Global Tools <b>Financeiro</b></span>
+    <span class="auth-logo-bars" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span>Base <b>Financeira</b></span>
   </a>
-  <a class="auth-back" href="index.html">Voltar ao site <span aria-hidden="true">↗</span></a>
+  <a class="auth-back" href="index.html">Voltar ao site</a>
 </header>
 <main class="auth-main">
   <section class="auth-card" aria-labelledby="authTitle">
@@ -64,7 +70,7 @@
     <h1 id="authTitle" class="auth-title">Acesse sua conta</h1>
     <p class="auth-subtitle">Entre para acompanhar suas operações financeiras.</p>
     <div class="auth-divider">ACESSO SEGURO</div>
-    <form id="authForm" novalidate>
+    <form id="authForm">
       <label>E-mail<input type="email" name="email" autocomplete="email" required maxlength="254" placeholder="voce@empresa.com.br"></label>
       <label>Senha<input type="password" name="password" autocomplete="current-password" minlength="8" required placeholder="Digite sua senha"></label>
       <label id="nameLabel" hidden>Nome completo<input type="text" name="fullName" autocomplete="name" maxlength="120" placeholder="Como podemos chamar você?"></label>
@@ -76,7 +82,7 @@
     <p class="auth-security"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3 19 6v5c0 4.7-3 8-7 10-4-2-7-5.3-7-10V6l7-3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Seus dados protegidos • Conexão segura</p>
   </section>
 </main>
-<footer class="auth-footer">© <span id="authYear">2026</span> Global Tools Financeiro · CNPJ 69.623.245/0001-71<br><a href="privacidade.html">Privacidade</a> · <a href="termos.html">Termos de uso</a></footer>
+<footer class="auth-footer">© <span id="authYear">2026</span> Base Financeira · CNPJ 69.623.245/0001-71<br><a href="privacidade.html">Privacidade</a> · <a href="termos.html">Termos de uso</a></footer>
 <script>document.getElementById("authYear").textContent = new Date().getFullYear();</script>
 </body>
 </html>
