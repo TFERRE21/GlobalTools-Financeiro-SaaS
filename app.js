@@ -84,16 +84,45 @@
   const config = window.GLOBALTOOLS_CONFIG || {};
   if (config.priceValue) $("#priceLabel").textContent = config.priceValue;
   const checkout = $("#checkoutLink");
+  const checkoutState = new URLSearchParams(window.location.search).get("checkout");
+  if (checkoutState === "success") {
+    $("#checkoutNote").textContent = "Retorno do checkout recebido. A confirmação da assinatura depende da validação segura do servidor; não feche esta página se precisar de suporte.";
+  } else if (checkoutState === "cancelled") {
+    $("#checkoutNote").textContent = "Checkout cancelado. Nenhuma assinatura deve ser considerada ativa.";
+  }
+
   if (config.checkoutUrl) {
     checkout.href = config.checkoutUrl;
     checkout.target = "_blank";
     checkout.rel = "noopener noreferrer";
-    checkout.textContent = "Assinar agora";
-    $("#checkoutNote").textContent = "A contratação será processada no provedor de pagamento configurado.";
+    checkout.textContent = "Abrir checkout";
+    $("#checkoutNote").textContent = "Checkout externo configurado. Confirme o modo de teste antes de usar.";
+  } else if (config.apiBaseUrl) {
+    checkout.textContent = "Continuar para checkout";
+    checkout.addEventListener("click", async event => {
+      event.preventDefault();
+      checkout.setAttribute("aria-disabled", "true");
+      checkout.textContent = "Preparando checkout…";
+      try {
+        const response = await fetch(config.apiBaseUrl.replace(/\\/$/, "") + "/api/create-checkout-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({})
+        });
+        const data = await response.json();
+        if (!response.ok || !data.url) throw new Error(data.error || "Checkout indisponível");
+        window.location.assign(data.url);
+      } catch (error) {
+        $("#checkoutNote").textContent = "Checkout indisponível: " + (error.message || "tente novamente mais tarde.");
+        checkout.removeAttribute("aria-disabled");
+        checkout.textContent = "Tentar novamente";
+      }
+    });
+    $("#checkoutNote").textContent = "Checkout Stripe via backend. Ative esta configuração somente depois de validar o fluxo em modo de teste.";
   } else {
     checkout.addEventListener("click", event => {
       event.preventDefault();
-      alert("A contratação online ainda não está ativa. O checkout precisa ser configurado antes da publicação comercial.");
+      alert("A contratação online continua desativada. Configure e teste o backend Stripe antes de habilitar o checkout.");
     });
   }
   $("#year").textContent = String(new Date().getFullYear());
