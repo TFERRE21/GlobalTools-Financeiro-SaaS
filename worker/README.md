@@ -14,6 +14,13 @@ Este é um scaffold de integração. **Não está ativado para cobranças reais*
 3. Criar o produto **GlobalTools Financeiro — Plano Essencial** no Stripe em **modo de teste** e criar preço recorrente mensal de **R$ 29,90 BRL**. Copiar o Price ID de teste (`price_...`).
 4. Não usar a chave `sk_live_...` nesta etapa.
 
+## Publicação por GitHub Actions
+1. Crie um token de API Cloudflare com permissão para editar Workers e obtenha o Account ID.
+2. No repositório GitHub, abra Settings → Secrets and variables → Actions e cadastre os secrets listados no README principal.
+3. Use somente a chave `sk_test_...`, o Price ID de teste ativo e o segredo do webhook de teste.
+4. Execute Actions → Deploy billing Worker → Run workflow. O workflow envia os secrets para o Cloudflare e publica o Worker.
+5. Depois do deploy, configure o endpoint de webhook no Stripe e teste o fluxo completo antes de habilitar o checkout no site.
+
 ## Publicação de teste
 1. Copie `wrangler.toml.example` para `wrangler.toml` e ajuste as URLs.
 2. No diretório `worker`, execute `npx wrangler login`.
