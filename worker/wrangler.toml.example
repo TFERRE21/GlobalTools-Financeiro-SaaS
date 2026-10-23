@@ -1,0 +1,10 @@
+name = "globaltools-financeiro-billing"
+main = "src/index.js"
+compatibility_date = "2026-10-23"
+
+[vars]
+# Replace with the exact public site origin (no trailing slash).
+ALLOWED_ORIGIN = "https://tferre21.github.io"
+# Full public site URL including repository path; change if a custom domain is used.
+PUBLIC_SITE_URL = "https://tferre21.github.io/GlobalTools-Financeiro-SaaS/"
+# Configure secrets separately with wrangler secret put; never commit secret values.
