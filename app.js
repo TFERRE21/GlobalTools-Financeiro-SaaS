@@ -205,7 +205,7 @@
       if (!data?.url) throw new Error(data?.error || "O Stripe não retornou o checkout Pix.");
       window.location.assign(data.url);
     } catch (error) {
-      $("#checkoutNote").textContent = "Pix indisponível: " + (error?.message || "tente novamente.");
+      $("#checkoutNote").textContent = "Não foi possível abrir o checkout Pix: " + (error?.message || "verifique se o Pix está ativado no Stripe e tente novamente.");
       pixCheckout.disabled = false;
       pixCheckout.textContent = original;
     }
