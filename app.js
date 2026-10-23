@@ -82,6 +82,9 @@
     const a = document.createElement("a"); a.href = url; a.download = "globaltools-lancamentos.csv"; a.click(); URL.revokeObjectURL(url);
   });
   const config = window.GLOBALTOOLS_CONFIG || {};
+  const supabaseClient = (window.supabase && config.supabaseUrl && config.supabaseAnonKey)
+    ? window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey)
+    : null;
   if (config.priceValue) $("#priceLabel").textContent = config.priceValue;
   const checkout = $("#checkoutLink");
   const checkoutState = new URLSearchParams(window.location.search).get("checkout");
@@ -104,9 +107,12 @@
       checkout.setAttribute("aria-disabled", "true");
       checkout.textContent = "Preparando checkout…";
       try {
+        if (!supabaseClient) throw new Error("Login ainda não configurado. Configure o Supabase antes de habilitar a contratação.");
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (!session?.access_token) throw new Error("Entre na sua conta antes de contratar.");
         const response = await fetch(config.apiBaseUrl.replace(/\/$/, "") + "/api/create-checkout-session", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "Authorization": "Bearer " + session.access_token },
           body: JSON.stringify({})
         });
         const data = await response.json();
