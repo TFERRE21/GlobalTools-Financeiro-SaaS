@@ -3,7 +3,18 @@
 /* Impede navegação/reload acidental quando qualquer formulário financeiro é enviado. */
 document.addEventListener("submit",function(event){
  const form=event.target;
- if(form instanceof HTMLFormElement && ["entryForm","accountForm","cardForm","costCenterForm","payableForm"].includes(form.id)){
+ if(!(form instanceof HTMLFormElement))return;
+ const kinds={accountForm:"account",cardForm:"card",costCenterForm:"costcenter",payableForm:"payable"};
+ if(kinds[form.id]){
+   event.preventDefault();
+   event.stopImmediatePropagation();
+   if(typeof saveManagedForm==="function"){
+     saveManagedForm({preventDefault:function(){},currentTarget:form},kinds[form.id]);
+   }else{
+     const box=document.getElementById("message");
+     if(box){box.textContent="O módulo de gravação não carregou. Atualize o painel.";box.classList.remove("hidden");box.style.display="block";}
+   }
+ }else if(form.id==="entryForm"){
    event.preventDefault();
  }
 },true);
