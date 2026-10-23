@@ -168,7 +168,38 @@ async function saveManagedForm(e,kind){
 }
 $$('[data-view]').forEach(b=>b.addEventListener('click',()=>view(b.dataset.view)));
 $('#payableFilter').addEventListener('change',renderExtras);
-document.addEventListener('click',async e=>{const paid=e.target.closest('[data-paid]');if(paid){if(!confirm('Marcar esta conta como paga?'))return;const r=await db.from('payables').update({status:'paid',paid_at:new Date().toISOString()}).eq('id',paid.dataset.paid).eq('company_id',companyId);if(r.error){msg('Não foi possível marcar como paga: '+r.error.message,true);return}await loadExtras();msg('Conta marcada como paga.');return}const b=e.target.closest('[data-remove]');if(!b)return;const table={account:'financial_accounts',card:'credit_cards',costcenter:'cost_centers',payable:'payables'}[b.dataset.kind];if(!table||!confirm('Excluir este registro?'))return;try{if(b.dataset.kind==='payable'){const {error}=await db.from(table).update({status:'cancelled'}).eq('id',b.dataset.remove).eq('company_id',companyId);if(error)throw error}else{const {error}=await db.from(table).delete().eq('id',b.dataset.remove).eq('company_id',companyId);if(error)throw error}await loadExtras();msg(b.dataset.kind==='payable'?'Conta cancelada.':'Registro excluído.')}catch(err){msg('Não foi possível concluir: '+err.message,true)}});
+document.addEventListener('click',async e=>{
+ const target=e.target instanceof Element?e.target:null;if(!target)return;
+ const paid=target.closest('[data-paid]');
+ if(paid){
+  e.preventDefault();if(paid.disabled||!db||!companyId)return;
+  if(!confirm('Marcar esta conta como paga?'))return;
+  paid.disabled=true;
+  try{const r=await db.from('payables').update({status:'paid',paid_at:new Date().toISOString()}).eq('id',paid.dataset.paid).eq('company_id',companyId).select('id');
+   if(r.error)throw r.error;if(!r.data?.length)throw new Error('Nenhum registro foi atualizado. Verifique a sessão e as permissões.');
+   await loadExtras();msg('Conta marcada como paga.');
+  }catch(err){msg('Não foi possível marcar como paga: '+(err?.message||String(err)),true)}finally{paid.disabled=false}
+  return;
+ }
+ const b=target.closest('[data-remove]');if(!b)return;
+ e.preventDefault();if(b.disabled||!db||!companyId){msg('O painel ainda está carregando. Aguarde e tente novamente.',true);return}
+ const kind=b.dataset.kind,id=b.dataset.remove,table={account:'financial_accounts',card:'credit_cards',costcenter:'cost_centers',payable:'payables'}[kind];
+ if(!table||!id)return;
+ if(!confirm(kind==='costcenter'?'Excluir este centro de custo permanentemente? Os lançamentos vinculados podem impedir a exclusão.':kind==='payable'?'Cancelar esta conta a pagar?':'Excluir este registro permanentemente?'))return;
+ b.disabled=true;const label=b.textContent;b.textContent='Processando…';
+ try{
+  if(kind==='payable'){
+   const r=await db.from(table).update({status:'cancelled'}).eq('id',id).eq('company_id',companyId).select('id');
+   if(r.error)throw r.error;if(!r.data?.length)throw new Error('Nenhuma conta foi atualizada. Verifique a sessão e as permissões.');
+  }else{
+   const r=await db.from(table).delete().eq('id',id).eq('company_id',companyId).select('id');
+   if(r.error)throw r.error;
+   if(!r.data?.length)throw new Error('O banco não confirmou a exclusão. Verifique as permissões ou se este registro está sendo usado em lançamentos.');
+  }
+  await loadExtras();msg(kind==='payable'?'Conta cancelada com sucesso.':'Registro excluído com sucesso.');
+ }catch(err){console.error('Falha na ação de exclusão',kind,id,err);msg('Não foi possível concluir: '+(err?.message||String(err)),true)}
+ finally{b.disabled=false;b.textContent=label}
+});
 const reportHead=$('#view-reports .head');if(reportHead&&!$('#printReport')){const p=document.createElement('button');p.id='printReport';p.className='btn';p.textContent='Imprimir / Salvar PDF';p.addEventListener('click',()=>window.print());reportHead.appendChild(p)}
 
 /* Ações críticas com delegação global: funcionam mesmo se os handlers individuais falharem. */
