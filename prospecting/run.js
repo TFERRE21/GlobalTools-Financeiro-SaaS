@@ -2,7 +2,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 
 const env = process.env;
-const required = ["CFO_API_TOKEN", "RESEND_API_KEY", "RESEND_FROM"];
+const required = ["CFO_API_TOKEN", "RESEND_API_KEY"];
 const missing = required.filter((key) => !env[key]);
 if (missing.length) {
   console.error("Configuração ausente:", missing.join(", "));
@@ -15,6 +15,7 @@ const SEND_EMAILS = env.SEND_EMAILS === "true";
 const STATE_PATH = path.resolve(env.PROSPECT_STATE_PATH || "./data/prospecting-state.json");
 const SITE_URL = (env.PRODUCT_URL || "https://globaltoolsfinanceirosaas.vps11710.panel.icontainer.work/").replace(/\/$/, "");
 const CFO_URL = env.CFO_API_URL || "https://cfo.com.br/api";
+const RESEND_FROM = env.RESEND_FROM || "Base Financeira <financeiro@oolivo.com.br>";
 
 const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
 const validEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -80,7 +81,7 @@ async function sendEmail(to, content) {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: env.RESEND_FROM, to: [to], subject: content.subject, html: content.html, text: content.text }),
+    body: JSON.stringify({ from: RESEND_FROM, to: [to], subject: content.subject, html: content.html, text: content.text }),
     signal: AbortSignal.timeout(30000)
   });
   const body = await response.json().catch(() => ({}));
