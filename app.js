@@ -245,7 +245,7 @@
     checkout.textContent = "Assinar por R$ 29,90/mês";
     checkout.href = "conta.html?next=subscribe";
     checkout.removeAttribute("aria-disabled");
-    $( "#checkoutNote" ).textContent = "Assinatura mensal com pagamento seguro pelo Stripe. Entre ou crie sua conta para continuar.";
+    $( "#checkoutNote" ).textContent = "Você poderá escolher Pix, cartão ou boleto na próxima tela.";
     checkout.addEventListener("click", async event => {
       event.preventDefault();
       try {
