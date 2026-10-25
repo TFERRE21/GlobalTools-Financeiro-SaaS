@@ -82,7 +82,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function sendEmail(to, content) {
   // Envia em ritmo conservador para não atingir o limite de requisições do Resend.
   for (let attempt = 0; attempt < 4; attempt += 1) {
-    await sleep(1200);
+    await sleep(10_000);
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
