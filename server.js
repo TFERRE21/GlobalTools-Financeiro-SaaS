@@ -65,7 +65,7 @@ const server = http.createServer(async (req, res) => {
       const email = session.customer_details?.email || session.customer_email;
       if (!email) return json(res, 400, { error: "O Stripe não retornou um e-mail para esta compra." });
       const quotaPath = path.join(root, ".planilha-email-quota.json");
-      const today = new Date().toISOString().slice(0, 10);
+      const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
       let quota = { date: today, sessions: [] };
       try {
         const savedQuota = JSON.parse(await readFile(quotaPath, "utf8"));
