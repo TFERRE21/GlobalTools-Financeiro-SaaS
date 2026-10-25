@@ -28,7 +28,7 @@ const server = http.createServer(async (req, res) => {
   if (requestUrl.pathname === "/api/planilha-checkout" && req.method === "POST") {
     try {
       if (!process.env.STRIPE_SECRET_KEY) return json(res, 503, { error: "Checkout ainda não configurado no VPS. Configure STRIPE_SECRET_KEY no ambiente do servidor." });
-      const filePath = path.join(root, "downloads", "Controle_Financeiro_Base_Financeira.xlsx");
+      const filePath = path.join(root, "downloads", "Controle_Financeiro_Preview.xlsx");
       if (!await stat(filePath).then(() => true).catch(() => false)) return json(res, 503, { error: "A planilha ainda está sendo publicada. Nenhuma cobrança foi iniciada." });
       const form = new URLSearchParams();
       form.set("mode", "payment");
@@ -60,8 +60,8 @@ const server = http.createServer(async (req, res) => {
       if (!response.ok || session.payment_status !== "paid" || session.mode !== "payment" || session.amount_total !== 2000 || session.currency !== "brl" || session.metadata?.product !== "controle_financeiro_excel") {
         return json(res, 403, { error: "Pagamento ainda não confirmado ou sessão não corresponde à planilha." });
       }
-      const file = await readFile(path.join(root, "downloads", "Controle_Financeiro_Base_Financeira.xlsx"));
-      res.writeHead(200, { "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "content-length": file.length, "content-disposition": 'attachment; filename="Controle_Financeiro_Base_Financeira.xlsx"', "cache-control": "no-store", "x-content-type-options": "nosniff" });
+      const file = await readFile(path.join(root, "downloads", "Controle_Financeiro_Preview.xlsx"));
+      res.writeHead(200, { "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "content-length": file.length, "content-disposition": 'attachment; filename="Controle_Financeiro_Preview.xlsx"', "cache-control": "no-store", "x-content-type-options": "nosniff" });
       res.end(file);
     } catch (error) {
       console.error("[delivery] Download da planilha indisponível:", error.message);
