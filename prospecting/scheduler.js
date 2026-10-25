@@ -73,7 +73,7 @@ function scheduleNextMidnight() {
 }
 
 if (enabled) {
-  console.log("[prospecting] Agendador ativo: execução inicial em 15 segundos e depois diariamente à meia-noite, fuso America/Sao_Paulo.");
+  console.log("[prospecting] VERSAO CAMPANHA IMEDIATA ATIVA: primeira execução em 15 segundos; próximas execuções diariamente à meia-noite, fuso America/Sao_Paulo.");
   setTimeout(() => void runProspecting(), 15_000);
   scheduleNextMidnight();
 } else {
