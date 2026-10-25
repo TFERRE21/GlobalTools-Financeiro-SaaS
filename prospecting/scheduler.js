@@ -73,7 +73,8 @@ function scheduleNextMidnight() {
 }
 
 if (enabled) {
-  console.log("[prospecting] Agendador ativo: diário à meia-noite, fuso America/Sao_Paulo.");
+  console.log("[prospecting] Agendador ativo: execução inicial em 15 segundos e depois diariamente à meia-noite, fuso America/Sao_Paulo.");
+  setTimeout(() => void runProspecting(), 15_000);
   scheduleNextMidnight();
 } else {
   console.log("[prospecting] Agendador desativado por PROSPECT_AUTORUN=false.");
