@@ -77,16 +77,29 @@ function emailContent(company) {
     text: `Olá, equipe da ${safeName}.\n\nEstamos apresentando o GlobalTools Financeiro, uma ferramenta para organizar entradas, despesas e acompanhar o saldo financeiro.\n\nConheça: ${SITE_URL}\n\nEsta é uma mensagem comercial. Se não quiser receber novos contatos, responda com SAIR para inclusão na lista de supressão.\n\nEquipe GlobalTools`
   };
 }
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function sendEmail(to, content) {
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: RESEND_FROM, to: [to], subject: content.subject, html: content.html, text: content.text }),
-    signal: AbortSignal.timeout(30000)
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(`Resend HTTP ${response.status}: ${body.message || body.name || "falha no envio"}`);
-  return body.id;
+  // Envia em ritmo conservador para não atingir o limite de requisições do Resend.
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    await sleep(1200);
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: RESEND_FROM, to: [to], subject: content.subject, html: content.html, text: content.text }),
+      signal: AbortSignal.timeout(30000)
+    });
+    const body = await response.json().catch(() => ({}));
+    if (response.ok) return body.id;
+    if (response.status === 429 && attempt < 3) {
+      const waitMs = Math.min(30000, 2000 * (2 ** attempt));
+      console.warn(`RATE_LIMIT: Resend limitou o envio; aguardando ${waitMs}ms antes de tentar novamente.`);
+      await sleep(waitMs);
+      continue;
+    }
+    throw new Error(`Resend HTTP ${response.status}: ${body.message || body.name || "falha no envio"}`);
+  }
+  throw new Error("Resend continuou limitando as requisições após novas tentativas.");
 }
 
 const state = await readState();
