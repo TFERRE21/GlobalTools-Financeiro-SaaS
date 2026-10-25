@@ -91,8 +91,8 @@ const server = http.createServer(async (req, res) => {
           from: process.env.PLANILHA_EMAIL_FROM || "Base Financeira <financeiro@oolivo.com.br>",
           to: [email],
           subject: "Sua Planilha Base Financeira está pronta",
-          text: "Obrigado pela compra! Segue em anexo sua Planilha Base Financeira em Excel. Guarde este e-mail para consultar o arquivo novamente.",
-          html: "<div style=\"font-family:Arial,sans-serif;color:#142d4e;max-width:600px;margin:auto\"><h2>Obrigado pela compra!</h2><p>Seu pagamento foi confirmado. A Planilha Base Financeira está anexada a este e-mail.</p><p>O arquivo inclui painel financeiro, lançamentos e gráficos para organizar receitas e despesas.</p><p>Atenciosamente,<br><strong>Base Financeira</strong></p></div>",
+          text: "Obrigado pela compra! Segue em anexo sua Planilha Base Financeira em Excel. Acesse o site pelo novo endereço: https://daymoney.com.br. Guarde este e-mail para consultar o arquivo novamente.",
+          html: "<div style=\"font-family:Arial,sans-serif;color:#142d4e;max-width:600px;margin:auto\"><h2>Obrigado pela compra!</h2><p>Seu pagamento foi confirmado. A Planilha Base Financeira está anexada a este e-mail.</p><p>O arquivo inclui painel financeiro, lançamentos e gráficos para organizar receitas e despesas.</p><p><a href=\"https://daymoney.com.br/\" style=\"display:inline-block;background:#12345a;color:#ffffff;text-decoration:none;padding:14px 22px;border-radius:8px;font-weight:bold\">Acessar Base Financeira</a></p><p>Atenciosamente,<br><strong>Base Financeira</strong></p></div>",
           attachments: [{ filename: "Controle_Financeiro_Base_Financeira.xlsx", content: file.toString("base64") }]
         })
       });
