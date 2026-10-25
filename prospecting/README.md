@@ -22,7 +22,7 @@ Depois de validar a origem e os candidatos, configure `SEND_EMAILS=true` e execu
 npm run prospect:send
 ```
 
-O lote é limitado a cinco mensagens por execução. O estado em `data/prospecting-state.json` registra endereços enviados e impede repetição nesse arquivo. Preserve esse arquivo em armazenamento persistente do VPS e faça backup. Não execute duas instâncias ao mesmo tempo. Respostas com “SAIR” precisam ser processadas e adicionadas a `suppressed` no arquivo de estado antes de qualquer execução posterior; a integração automática de respostas/descadastro ainda não está implementada.
+O robô limita o total a 80 mensagens por dia (UTC), mesmo se o serviço reiniciar, desde que o arquivo de estado permaneça persistente. A execução agendada ocorre a cada 24 horas. A cota mensal de leads da CFO pode ser menor e limitar os contatos disponíveis. O estado em `data/prospecting-state.json` registra endereços enviados e impede repetição nesse arquivo. Preserve esse arquivo em armazenamento persistente do VPS e faça backup. Não execute duas instâncias ao mesmo tempo. Respostas com “SAIR” precisam ser processadas e adicionadas a `suppressed` no arquivo de estado antes de qualquer execução posterior; a integração automática de respostas/descadastro ainda não está implementada.
 
 ## Agendamento no VPS
 
