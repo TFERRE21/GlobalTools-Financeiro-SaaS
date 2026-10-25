@@ -13,7 +13,7 @@ const DAYS = Math.max(1, Number(env.PROSPECT_DAYS || 60));
 const DAILY_LIMIT = Math.min(80, Math.max(1, Number(env.PROSPECT_DAILY_LIMIT || 80)));
 const SEND_EMAILS = env.SEND_EMAILS === "true";
 const STATE_PATH = path.resolve(env.PROSPECT_STATE_PATH || "./data/prospecting-state.json");
-const SITE_URL = (env.PRODUCT_URL || "https://globaltoolsfinanceirosaas.vps11710.panel.icontainer.work/").replace(/\/$/, "");
+const SITE_URL = "https://daymoney.com.br";
 const CFO_URL = env.CFO_API_URL || "https://cfo.com.br/api";
 const RESEND_FROM = env.RESEND_FROM || "Base Financeira <financeiro@oolivo.com.br>";
 
