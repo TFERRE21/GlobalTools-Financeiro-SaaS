@@ -10,7 +10,7 @@ if (missing.length) {
 }
 
 const DAYS = Math.max(1, Number(env.PROSPECT_DAYS || 60));
-const LIMIT = Math.min(5, Math.max(1, Number(env.PROSPECT_BATCH_LIMIT || 5)));
+const DAILY_LIMIT = Math.min(80, Math.max(1, Number(env.PROSPECT_DAILY_LIMIT || 80)));
 const SEND_EMAILS = env.SEND_EMAILS === "true";
 const STATE_PATH = path.resolve(env.PROSPECT_STATE_PATH || "./data/prospecting-state.json");
 const SITE_URL = (env.PRODUCT_URL || "https://globaltoolsfinanceirosaas.vps11710.panel.icontainer.work/").replace(/\/$/, "");
@@ -92,13 +92,13 @@ async function sendEmail(to, content) {
 const state = await readState();
 state.lastRun = new Date().toISOString();
 const rows = await fetchCompanies();
-const candidates = rows.map(mapCompany).filter((c) => {
+const today = new Date().toISOString().slice(0, 10);\nconst sentToday = Object.values(state.sent).filter((item) => String(item.sentAt || "").slice(0, 10) === today).length;\nconst remainingToday = Math.max(0, DAILY_LIMIT - sentToday);\nconst candidates = rows.map(mapCompany).filter((c) => {
   if (!c.cnpj || c.cnpj.length !== 14 || !c.name || !validEmail(c.email) || !c.openedAt || c.contactMasked) return false;
   const ageDays = (Date.now() - c.openedAt.getTime()) / 86400000;
   return ageDays >= 0 && ageDays <= DAYS && !state.sent[c.email] && !state.suppressed[c.email];
-}).slice(0, LIMIT);
+}).slice(0, remainingToday);
 
-console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, companies_found: rows.length, eligible: candidates.length, limit: LIMIT }, null, 2));
+console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, companies_found: rows.length, eligible: candidates.length, daily_limit: DAILY_LIMIT, sent_today_before_run: sentToday, remaining_today_before_run: remainingToday }, null, 2));
 let sent = 0;
 for (const company of candidates) {
   console.log(`CANDIDATE ${JSON.stringify({ name: company.name, cnpj: company.cnpj, openedAt: company.openedAt.toISOString().slice(0, 10), email: company.email, source: company.source })}`);
@@ -117,4 +117,4 @@ for (const company of candidates) {
   }
 }
 await saveState(state);
-console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", eligible: candidates.length, sent, state_file: STATE_PATH }, null, 2));
+console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", eligible: candidates.length, sent, daily_limit: DAILY_LIMIT, sent_today_total: sentToday + sent, state_file: STATE_PATH }, null, 2));
