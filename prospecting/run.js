@@ -66,17 +66,63 @@ function mapCompany(row) {
   return { cnpj, name, email, openedAt, source: CFO_URL, contactMasked: Boolean(row.contato_mascarado) };
 }
 function emailContent(company) {
-  const safeName = company.name.replace(/[<>]/g, "").slice(0, 120) || "equipe";
-  return {
-    subject: `Uma ideia para organizar o financeiro da ${safeName}`,
-    html: `<p>Olá, equipe da <strong>${safeName}</strong>.</p>
-<p>Estamos apresentando o GlobalTools Financeiro, uma ferramenta para ajudar pequenas empresas a organizar entradas, despesas e acompanhar o saldo financeiro.</p>
-<p>Você pode conhecer a proposta aqui: <a href="${SITE_URL}">${SITE_URL}</a></p>
-<p>Esta é uma mensagem comercial enviada para um contato empresarial publicado. Se não quiser receber novos contatos, responda a este e-mail com <strong>SAIR</strong>; seu endereço será incluído na lista de supressão.</p>
-<p>Atenciosamente,<br>Equipe GlobalTools</p>`,
-    text: `Olá, equipe da ${safeName}.\n\nEstamos apresentando o GlobalTools Financeiro, uma ferramenta para organizar entradas, despesas e acompanhar o saldo financeiro.\n\nConheça: ${SITE_URL}\n\nEsta é uma mensagem comercial. Se não quiser receber novos contatos, responda com SAIR para inclusão na lista de supressão.\n\nEquipe GlobalTools`
-  };
+  const safeName = company.name.replace(/[<>]/g, "").slice(0, 120) || "sua empresa";
+  const site = SITE_URL;
+  const html = `<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sua empresa começou. Vamos organizar o futuro?</title></head>
+<body style="margin:0;padding:24px 8px;background:#f3f5f7;font-family:Arial,Helvetica,sans-serif;color:#17324a;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;margin:0 auto;background:#ffffff;border-collapse:separate;border-spacing:0;border-radius:12px;overflow:hidden;">
+<tr><td style="background:#112d46;padding:28px 24px 24px;text-align:center;color:#ffffff;">
+<div style="font-size:12px;font-weight:bold;letter-spacing:1.4px;color:#b9f3d3;margin-bottom:16px;">✦ BASE FINANCEIRA</div>
+<h1 style="font-size:25px;line-height:1.25;margin:0 0 8px;font-weight:700;color:#ffffff;">Sua empresa começou.<br>Vamos organizar o futuro?</h1>
+<p style="font-size:13px;margin:0;color:#e6edf4;">Parabéns por essa nova conquista! 🎉</p>
+</td></tr>
+<tr><td style="padding:28px 28px 24px;font-size:14px;line-height:1.7;color:#40556a;">
+<p style="margin:0 0 14px;">Olá, empreendedor(a) da <strong style="color:#17324a;">${safeName}</strong>!</p>
+<p style="margin:0 0 14px;">Abrir uma empresa é um passo importante. Desde o primeiro dia, cuidar do dinheiro que entra e sai ajuda você a tomar decisões com mais clareza e confiança.</p>
+<p style="margin:0 0 22px;">A <strong style="color:#17324a;">Base Financeira</strong> foi pensada para ajudar pequenos negócios a manter a rotina financeira mais organizada.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+<tr><td width="38" valign="top" style="padding:0 0 16px;font-size:20px;">📊</td><td style="padding:0 0 16px;"><strong style="display:block;color:#17324a;font-size:14px;">Acompanhe receitas e despesas</strong><span style="font-size:12px;color:#718096;">Tenha uma visão mais clara das movimentações do negócio.</span></td></tr>
+<tr><td width="38" valign="top" style="padding:0 0 16px;font-size:20px;">🗓️</td><td style="padding:0 0 16px;"><strong style="display:block;color:#17324a;font-size:14px;">Organize o fluxo de caixa</strong><span style="font-size:12px;color:#718096;">Planeje pagamentos e acompanhe o saldo com mais praticidade.</span></td></tr>
+<tr><td width="38" valign="top" style="padding:0 0 20px;font-size:20px;">🧭</td><td style="padding:0 0 20px;"><strong style="display:block;color:#17324a;font-size:14px;">Decida com mais segurança</strong><span style="font-size:12px;color:#718096;">Use informações organizadas como apoio à gestão da empresa.</span></td></tr>
+</table>
+<div style="text-align:center;padding:2px 0 18px;"><a href="${site}" style="display:inline-block;background:#07835f;color:#ffffff;text-decoration:none;font-size:14px;font-weight:bold;padding:14px 22px;border-radius:5px;">Conhecer a Base Financeira →</a></div>
+<p style="text-align:center;margin:0;color:#8190a0;font-size:11px;">Organização hoje. Mais clareza para crescer amanhã.</p>
+</td></tr>
+<tr><td style="background:#f7f9fa;border-top:1px solid #e4e9ed;padding:16px 22px;text-align:center;color:#82909d;font-size:10px;line-height:1.6;">Você recebeu este e-mail como demonstração de uma campanha de apresentação da Base Financeira. Se não quiser receber novas mensagens, responda com <strong>SAIR</strong>.<br><br>Base Financeira · Mensagem de demonstração</td></tr>
+</table>
+</body></html>`;
+  const text = `BASE FINANCEIRA
+
+Sua empresa começou. Vamos organizar o futuro?
+Parabéns por essa nova conquista!
+
+Olá, empreendedor(a) da ${safeName}!
+
+Abrir uma empresa é um passo importante. Desde o primeiro dia, cuidar do dinheiro que entra e sai ajuda você a tomar decisões com mais clareza e confiança.
+
+A Base Financeira foi pensada para ajudar pequenos negócios a manter a rotina financeira mais organizada.
+
+📊 Acompanhe receitas e despesas
+Tenha uma visão mais clara das movimentações do negócio.
+
+🗓️ Organize o fluxo de caixa
+Planeje pagamentos e acompanhe o saldo com mais praticidade.
+
+🧭 Decida com mais segurança
+Use informações organizadas como apoio à gestão da empresa.
+
+Conhecer a Base Financeira: ${site}
+
+Organização hoje. Mais clareza para crescer amanhã.
+
+Você recebeu este e-mail como demonstração de uma campanha de apresentação da Base Financeira. Se não quiser receber novas mensagens, responda com SAIR.
+
+Base Financeira · Mensagem de demonstração`;
+  return { subject: "Sua empresa começou. Vamos organizar o futuro?", html, text };
 }
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function sendEmail(to, content) {
