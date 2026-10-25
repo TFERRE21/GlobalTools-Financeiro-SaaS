@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://daymoney.com.br/sitemap.xml
