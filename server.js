@@ -109,7 +109,7 @@ const server = http.createServer(async (req, res) => {
 
 
 function siteUrl(req) {
-  if (process.env.PUBLIC_SITE_URL) return process.env.PUBLIC_SITE_URL.replace(/\\/$/, "");
+  if (process.env.PUBLIC_SITE_URL) return process.env.PUBLIC_SITE_URL.replace(/\/$/, "");
   const proto = String(req.headers["x-forwarded-proto"] || "https").split(",")[0].trim();
   const host = String(req.headers["x-forwarded-host"] || req.headers.host || "localhost").split(",")[0].trim();
   return proto + "://" + host;
