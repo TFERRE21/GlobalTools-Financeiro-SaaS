@@ -1,5 +1,5 @@
 import http from "node:http";
-import { readFile, stat } from "node:fs/promises";
+import { readFile, writeFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import "./prospecting/scheduler.js";
@@ -64,6 +64,15 @@ const server = http.createServer(async (req, res) => {
       }
       const email = session.customer_details?.email || session.customer_email;
       if (!email) return json(res, 400, { error: "O Stripe não retornou um e-mail para esta compra." });
+      const quotaPath = path.join(root, ".planilha-email-quota.json");
+      const today = new Date().toISOString().slice(0, 10);
+      let quota = { date: today, sessions: [] };
+      try {
+        const savedQuota = JSON.parse(await readFile(quotaPath, "utf8"));
+        if (savedQuota.date === today && Array.isArray(savedQuota.sessions)) quota = savedQuota;
+      } catch {}
+      if (quota.sessions.includes(session.id)) return json(res, 200, { ok: true, message: "Esta compra já teve o envio processado." });
+      if (quota.sessions.length >= 60) return json(res, 429, { error: "Limite diário de envios da planilha atingido. O envio será retomado no próximo dia; entre em contato com o suporte se precisar do arquivo antes." });
       const file = await readFile(path.join(root, "downloads", "Controle_Financeiro_Preview.xlsx"));
       const resendResponse = await fetch("https://api.resend.com/emails", {
         method: "POST",
@@ -82,6 +91,9 @@ const server = http.createServer(async (req, res) => {
         console.error("[delivery] Resend falhou", { status: resendResponse.status, message: resendData?.message || resendData?.name });
         return json(res, 502, { error: "Pagamento confirmado, mas o e-mail não foi enviado. Use o botão de download ou tente novamente." });
       }
+      quota.sessions.push(session.id);
+      try { await writeFile(quotaPath, JSON.stringify(quota, null, 2), { mode: 0o600 }); }
+      catch (quotaError) { console.error("[delivery] Não foi possível salvar a cota diária:", quotaError.message); }
       return json(res, 200, { ok: true, message: "Planilha enviada para o e-mail usado na compra." });
     } catch (error) {
       console.error("[delivery] Envio automático falhou:", error.message);
