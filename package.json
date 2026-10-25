@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "prospect:check": "node --env-file=.env.prospecting --disable-warning=ExperimentalWarning prospecting/run.js",
+    "prospect:check": "node --env-file=.env.prospecting prospecting/run.js",
     "prospect:send": "SEND_EMAILS=true node --env-file=.env.prospecting --disable-warning=ExperimentalWarning prospecting/run.js"
   },
   "engines": {
