@@ -50,6 +50,45 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  if (requestUrl.pathname === "/api/planilha-entregar" && req.method === "POST") {
+    try {
+      if (!process.env.STRIPE_SECRET_KEY) return json(res, 503, { error: "Validação de pagamento indisponível." });
+      if (!process.env.RESEND_API_KEY) return json(res, 503, { error: "Envio de e-mail ainda não está configurado no servidor." });
+      const body = await readRequestJson(req);
+      const sessionId = String(body.session_id || "");
+      if (!/^cs_(test|live)_[A-Za-z0-9]+$/.test(sessionId)) return json(res, 400, { error: "Sessão de pagamento inválida." });
+      const stripeResponse = await fetch("https://api.stripe.com/v1/checkout/sessions/" + encodeURIComponent(sessionId), { headers: { Authorization: "Bearer " + process.env.STRIPE_SECRET_KEY } });
+      const session = await stripeResponse.json();
+      if (!stripeResponse.ok || session.payment_status !== "paid" || session.mode !== "payment" || session.amount_total !== 2000 || session.currency !== "brl" || session.metadata?.product !== "controle_financeiro_excel") {
+        return json(res, 403, { error: "Pagamento ainda não confirmado para esta planilha." });
+      }
+      const email = session.customer_details?.email || session.customer_email;
+      if (!email) return json(res, 400, { error: "O Stripe não retornou um e-mail para esta compra." });
+      const file = await readFile(path.join(root, "downloads", "Controle_Financeiro_Preview.xlsx"));
+      const resendResponse = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + process.env.RESEND_API_KEY, "Content-Type": "application/json", "Idempotency-Key": "planilha-" + session.id },
+        body: JSON.stringify({
+          from: process.env.PLANILHA_EMAIL_FROM || "Base Financeira <financeiro@oolivo.com.br>",
+          to: [email],
+          subject: "Sua Planilha Base Financeira está pronta",
+          text: "Obrigado pela compra! Segue em anexo sua Planilha Base Financeira em Excel. Guarde este e-mail para consultar o arquivo novamente.",
+          html: "<div style=\"font-family:Arial,sans-serif;color:#142d4e;max-width:600px;margin:auto\"><h2>Obrigado pela compra!</h2><p>Seu pagamento foi confirmado. A Planilha Base Financeira está anexada a este e-mail.</p><p>O arquivo inclui painel financeiro, lançamentos e gráficos para organizar receitas e despesas.</p><p>Atenciosamente,<br><strong>Base Financeira</strong></p></div>",
+          attachments: [{ filename: "Controle_Financeiro_Base_Financeira.xlsx", content: file.toString("base64") }]
+        })
+      });
+      const resendData = await resendResponse.json();
+      if (!resendResponse.ok) {
+        console.error("[delivery] Resend falhou", { status: resendResponse.status, message: resendData?.message || resendData?.name });
+        return json(res, 502, { error: "Pagamento confirmado, mas o e-mail não foi enviado. Use o botão de download ou tente novamente." });
+      }
+      return json(res, 200, { ok: true, message: "Planilha enviada para o e-mail usado na compra." });
+    } catch (error) {
+      console.error("[delivery] Envio automático falhou:", error.message);
+      return json(res, 500, { error: "Não foi possível enviar a planilha agora." });
+    }
+  }
+
   if (requestUrl.pathname === "/api/planilha-download" && req.method === "GET") {
     try {
       if (!process.env.STRIPE_SECRET_KEY) return json(res, 503, { error: "Entrega temporariamente indisponível." });
@@ -104,6 +143,16 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+
+
+async function readRequestJson(req) {
+  let raw = "";
+  for await (const chunk of req) {
+    raw += chunk;
+    if (raw.length > 10000) throw new Error("Request too large");
+  }
+  return raw ? JSON.parse(raw) : {};
+}
 
 function siteUrl(req) {
   if (process.env.PUBLIC_SITE_URL) return process.env.PUBLIC_SITE_URL.replace(/\/$/, "");
