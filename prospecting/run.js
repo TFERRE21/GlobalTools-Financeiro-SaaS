@@ -92,7 +92,9 @@ async function sendEmail(to, content) {
 const state = await readState();
 state.lastRun = new Date().toISOString();
 const rows = await fetchCompanies();
-const today = new Date().toISOString().slice(0, 10);\nconst sentToday = Object.values(state.sent).filter((item) => String(item.sentAt || "").slice(0, 10) === today).length;\nconst remainingToday = Math.max(0, DAILY_LIMIT - sentToday);\nconst candidates = rows.map(mapCompany).filter((c) => {
+const today = new Date().toISOString().slice(0, 10);
+const sentToday = Object.values(state.sent).filter((item) => String(item.sentAt || "").slice(0, 10) === today).length;
+const remainingToday = Math.max(0, DAILY_LIMIT - sentToday);\nconst candidates = rows.map(mapCompany).filter((c) => {
   if (!c.cnpj || c.cnpj.length !== 14 || !c.name || !validEmail(c.email) || !c.openedAt || c.contactMasked) return false;
   const ageDays = (Date.now() - c.openedAt.getTime()) / 86400000;
   return ageDays >= 0 && ageDays <= DAYS && !state.sent[c.email] && !state.suppressed[c.email];
