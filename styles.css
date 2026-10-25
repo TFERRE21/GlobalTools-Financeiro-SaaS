@@ -21,3 +21,11 @@ footer{padding:18px max(5%,calc((100% - 1320px)/2)) 12px}.footer-main{max-width:
 
 /* A demonstração interativa abre ao clicar no CTA, sem alongar a landing page inicial. */
 #painel{display:none}#painel:target{display:block}
+
+
+/* Oferta da planilha em destaque na primeira dobra */
+.hero-offer{display:flex;align-items:center;justify-content:space-between;gap:14px;max-width:580px;margin:18px 0 0;padding:15px 17px;border:1px solid #a9dfcd;border-radius:13px;background:linear-gradient(110deg,#effcf6 0%,#fff 100%);box-shadow:0 8px 24px rgba(8,136,95,.09);text-decoration:none;transition:transform .18s,box-shadow .18s}
+.hero-offer:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(8,136,95,.15)}
+.offer-copy{display:flex;flex-direction:column;gap:2px;min-width:0}.offer-kicker{font-size:9px;font-weight:800;letter-spacing:1.2px;color:#07885f}.offer-copy strong{font-size:14px;line-height:1.4;color:#163b65}.offer-copy strong b{font-size:20px;color:#07885f;white-space:nowrap}.offer-copy small{font-size:10px;color:#5e7190}.offer-cta{flex-shrink:0;background:#08a875;color:white;border-radius:8px;padding:10px 12px;font-size:10px;font-weight:800;letter-spacing:.4px;white-space:nowrap}
+@media(max-width:760px){.hero-offer{max-width:none;margin-top:16px;padding:13px}.offer-copy strong{font-size:12px}.offer-copy strong b{font-size:18px}.offer-cta{font-size:9px;padding:9px 10px}}
+@media(max-width:420px){.hero-offer{align-items:flex-start}.offer-copy strong{font-size:11px}.offer-copy strong b{font-size:17px}.offer-cta{padding:8px 9px}}
