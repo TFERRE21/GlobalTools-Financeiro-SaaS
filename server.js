@@ -21,6 +21,10 @@ const types = {
 
 const server = http.createServer(async (req, res) => {
   const requestUrl = new URL(req.url || "/", "http://localhost");
+  if (requestUrl.pathname === "/api/status" && req.method === "GET") {
+    return json(res, 200, { ok: true, checkout: Boolean(process.env.STRIPE_SECRET_KEY), service: "globaltools-financeiro-saas" });
+  }
+
   if (requestUrl.pathname === "/api/planilha-checkout" && req.method === "POST") {
     try {
       if (!process.env.STRIPE_SECRET_KEY) return json(res, 503, { error: "Checkout ainda não configurado no VPS. Configure STRIPE_SECRET_KEY no ambiente do servidor." });
