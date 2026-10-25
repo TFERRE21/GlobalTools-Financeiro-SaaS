@@ -53,6 +53,18 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+
+function siteUrl(req) {
+  if (process.env.PUBLIC_SITE_URL) return process.env.PUBLIC_SITE_URL.replace(/\\/$/, "");
+  const proto = String(req.headers["x-forwarded-proto"] || "https").split(",")[0].trim();
+  const host = String(req.headers["x-forwarded-host"] || req.headers.host || "localhost").split(",")[0].trim();
+  return proto + "://" + host;
+}
+function json(res, status, body) {
+  res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
+  res.end(JSON.stringify(body));
+}
+
 server.listen(port, "0.0.0.0", () => {
   console.log(`GlobalTools Financeiro SaaS listening on 0.0.0.0:${port}`);
 });
