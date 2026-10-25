@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "prospect:check": "SEND_EMAILS=false node prospecting/run.js",
-    "prospect:send": "SEND_EMAILS=true node prospecting/run.js"
+    "prospect:check": "node --env-file=.env.prospecting --disable-warning=ExperimentalWarning prospecting/run.js",
+    "prospect:send": "SEND_EMAILS=true node --env-file=.env.prospecting --disable-warning=ExperimentalWarning prospecting/run.js"
   },
   "engines": {
     "node": ">=20"
