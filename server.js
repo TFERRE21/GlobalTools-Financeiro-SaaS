@@ -32,10 +32,7 @@ const server = http.createServer(async (req, res) => {
       if (!await stat(filePath).then(() => true).catch(() => false)) return json(res, 503, { error: "A planilha ainda está sendo publicada. Nenhuma cobrança foi iniciada." });
       const form = new URLSearchParams();
       form.set("mode", "payment");
-      form.set("line_items[0][price_data][currency]", "brl");
-      form.set("line_items[0][price_data][unit_amount]", "2000");
-      form.set("line_items[0][price_data][product_data][name]", "Planilha Controle Financeiro Base Financeira");
-      form.set("line_items[0][price_data][product_data][description]", "Planilha Excel com painel, lançamentos e gráficos.");
+      form.set("line_items[0][price]", "price_1UUHdSCCSBhBJictzwSLvlal");
       form.set("line_items[0][quantity]", "1");
       form.set("success_url", siteUrl(req) + "/obrigado-planilha.html?session_id={CHECKOUT_SESSION_ID}");
       form.set("cancel_url", siteUrl(req) + "/#planilha");
