@@ -64,6 +64,16 @@ const server = http.createServer(async (req, res) => {
       }
       const email = session.customer_details?.email || session.customer_email;
       if (!email) return json(res, 400, { error: "O Stripe não retornou um e-mail para esta compra." });
+      const normalizedEmail = email.trim().toLowerCase();
+      const sentEmailsPath = path.join(root, ".planilha-email-enviados.json");
+      let sentEmails = [];
+      try {
+        const savedEmails = JSON.parse(await readFile(sentEmailsPath, "utf8"));
+        if (Array.isArray(savedEmails)) sentEmails = savedEmails;
+      } catch {}
+      if (sentEmails.includes(normalizedEmail)) {
+        return json(res, 200, { ok: true, alreadySent: true, message: "Este e-mail já recebeu a planilha anteriormente. Nenhum novo e-mail foi enviado." });
+      }
       const quotaPath = path.join(root, ".planilha-email-quota.json");
       const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
       let quota = { date: today, sessions: [] };
@@ -94,6 +104,9 @@ const server = http.createServer(async (req, res) => {
       quota.sessions.push(session.id);
       try { await writeFile(quotaPath, JSON.stringify(quota, null, 2), { mode: 0o600 }); }
       catch (quotaError) { console.error("[delivery] Não foi possível salvar a cota diária:", quotaError.message); }
+      sentEmails.push(normalizedEmail);
+      try { await writeFile(sentEmailsPath, JSON.stringify([...new Set(sentEmails)], null, 2), { mode: 0o600 }); }
+      catch (sentEmailsError) { console.error("[delivery] Não foi possível salvar o histórico de e-mails enviados:", sentEmailsError.message); }
       return json(res, 200, { ok: true, message: "Planilha enviada para o e-mail usado na compra." });
     } catch (error) {
       console.error("[delivery] Envio automático falhou:", error.message);
