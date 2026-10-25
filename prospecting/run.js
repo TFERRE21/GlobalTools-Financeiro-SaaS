@@ -41,7 +41,9 @@ async function fetchCompanies() {
   const params = new URLSearchParams({
     resource: "empresas",
     dias: String(DAYS),
-    per_page: String(Math.min(100, LIMIT * 10))
+    per_page: String(Math.min(100, LIMIT * 10)),
+    reveal: "1",
+    sit: "2"
   });
   if (env.CFO_UF) params.set("uf", env.CFO_UF);
   if (env.CFO_CNAE) params.set("cnae", env.CFO_CNAE);
@@ -57,10 +59,10 @@ async function fetchCompanies() {
 }
 function mapCompany(row) {
   const cnpj = String(first(row.cnpj, row.CNPJ, row.documento, row.numero_cnpj) || "").replace(/\D/g, "");
-  const name = String(first(row.razao_social, row.nome, row.nome_fantasia, row.name) || "").trim();
-  const email = normalizeEmail(first(row.email, row.email_contato, row.email_comercial, row.contato_email));
-  const openedAt = asDate(first(row.data_abertura, row.abertura, row.data_inicio_atividade, row.opening_date));
-  return { cnpj, name, email, openedAt, source: CFO_URL };
+  const name = String(first(row.nome_fantasia, row.razao_social, row.nome, row.name) || "").trim();
+  const email = normalizeEmail(first(row.contato?.email, row.email, row.email_contato, row.email_comercial, row.contato_email));
+  const openedAt = asDate(first(row.data_inicio, row.data_abertura, row.abertura, row.data_inicio_atividade, row.opening_date));
+  return { cnpj, name, email, openedAt, source: CFO_URL, contactMasked: Boolean(row.contato_mascarado) };
 }
 function emailContent(company) {
   const safeName = company.name.replace(/[<>]/g, "").slice(0, 120) || "equipe";
@@ -90,7 +92,7 @@ const state = await readState();
 state.lastRun = new Date().toISOString();
 const rows = await fetchCompanies();
 const candidates = rows.map(mapCompany).filter((c) => {
-  if (!c.cnpj || c.cnpj.length !== 14 || !c.name || !validEmail(c.email) || !c.openedAt) return false;
+  if (!c.cnpj || c.cnpj.length !== 14 || !c.name || !validEmail(c.email) || !c.openedAt || c.contactMasked) return false;
   const ageDays = (Date.now() - c.openedAt.getTime()) / 86400000;
   return ageDays >= 0 && ageDays <= DAYS && !state.sent[c.email] && !state.suppressed[c.email];
 }).slice(0, LIMIT);
