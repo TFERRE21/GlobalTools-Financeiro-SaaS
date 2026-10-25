@@ -191,7 +191,7 @@
   if (pixCheckout) pixCheckout.addEventListener("click", async () => {
     const original = pixCheckout.textContent;
     pixCheckout.disabled = true;
-    pixCheckout.textContent = "Gerando Pix…";
+    pixCheckout.textContent = "Abrindo formas de pagamento…";
     try {
       if (!supabaseClient) throw new Error("O login ainda não está configurado.");
       const { data: { session } } = await supabaseClient.auth.getSession();
@@ -205,7 +205,7 @@
       if (!data?.url) throw new Error(data?.error || "O Stripe não retornou o checkout Pix.");
       window.location.assign(data.url);
     } catch (error) {
-      $("#checkoutNote").textContent = "Não foi possível abrir o checkout Pix: " + (error?.message || "verifique se o Pix está ativado no Stripe e tente novamente.");
+      $("#checkoutNote").textContent = "Não foi possível abrir as formas de pagamento: " + (error?.message || "tente novamente.");
       pixCheckout.disabled = false;
       pixCheckout.textContent = original;
     }
