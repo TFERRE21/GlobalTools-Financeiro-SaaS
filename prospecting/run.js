@@ -42,7 +42,7 @@ async function fetchCompanies() {
   const params = new URLSearchParams({
     resource: "empresas",
     dias: String(DAYS),
-    per_page: String(Math.min(100, LIMIT * 10)),
+    per_page: "100",
     reveal: "1",
     sit: "2"
   });
