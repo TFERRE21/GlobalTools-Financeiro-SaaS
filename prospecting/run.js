@@ -24,6 +24,20 @@ const STATE_PATH = path.resolve(env.PROSPECT_STATE_PATH || "./data/prospecting-s
 const SITE_URL = (env.PUBLIC_SITE_URL || "https://daymoney.com.br").replace(/\/$/, "") + "/";
 const CFO_URL = env.CFO_API_URL || "https://cfo.com.br/api";
 const cfoQuotaHeaders = {};
+const CFO_META_URL = env.CFO_META_URL || "https://cfo.com.br/v1/meta";
+async function fetchCfoMeta() {
+  try {
+    const response = await fetch(CFO_META_URL, {
+      headers: { Authorization: `Bearer ${env.CFO_API_TOKEN}`, Accept: "application/json" },
+      signal: AbortSignal.timeout(10000)
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) return { http_status: response.status, error: body?.error?.message || body?.message || "meta indisponível" };
+    return body;
+  } catch (error) {
+    return { error: "meta indisponível: " + String(error.message || error).slice(0, 160) };
+  }
+}
 const RESEND_FROM = env.RESEND_FROM || "Base Financeira <financeiro@oolivo.com.br>";
 
 const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
@@ -280,7 +294,7 @@ const resendSafety = await loadResendSafetyState();
 if (resendSafety.recentIssues || resendSafety.recentBadSuppressions) {
   console.warn("[prospecting] ALERTA: " + resendSafety.recentIssues + " falha(s) recente(s) e " + resendSafety.recentBadSuppressions + " supressão(ões) recente(s); o envio fica bloqueado até revisão.");
 }
-const rows = await fetchCompanies();
+const [rows, cfoMeta] = await Promise.all([fetchCompanies(), fetchCfoMeta()]);
 const today = localDateKey(new Date());
 const targetOpeningDate = previousBusinessDayKey(new Date());
 const requestedTargetDates = String(env.PROSPECT_TARGET_DATES || "").split(",").map((value) => value.trim()).filter((value) => value.length === 10 && value[4] === "-" && value[7] === "-" && !Number.isNaN(Date.parse(value + "T12:00:00Z")));
@@ -353,7 +367,7 @@ const filteredCandidates = mappedRows.filter((c, index) => {
 filterCounts.eligible_before_limit = filteredCandidates.length;
 const candidates = filteredCandidates.slice(0, remainingToday);
 
-console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, target_opening_dates: [...targetOpeningDates], target_opening_date: targetOpeningDate, companies_found: rows.length, cfo_quota_headers: cfoQuotaHeaders, filter_counts: filterCounts, invalid_reasons: invalidReasons, contact_mask_values: contactMaskValues, invalid_examples: invalidExamples, eligible: candidates.length, daily_limit: DAILY_LIMIT, sent_today_before_run: sentToday, remaining_today_before_run: remainingToday }, null, 2));
+console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, target_opening_dates: [...targetOpeningDates], target_opening_date: targetOpeningDate, companies_found: rows.length, cfo_quota_headers: cfoQuotaHeaders, cfo_meta: cfoMeta, filter_counts: filterCounts, invalid_reasons: invalidReasons, contact_mask_values: contactMaskValues, invalid_examples: invalidExamples, eligible: candidates.length, daily_limit: DAILY_LIMIT, sent_today_before_run: sentToday, remaining_today_before_run: remainingToday }, null, 2));
 let sent = 0;
 for (const company of candidates) {
   console.log(`CANDIDATE ${JSON.stringify({ name: company.name, cnpj: company.cnpj, openedAt: company.openedAt.toISOString().slice(0, 10), email: company.email, source: company.source, emailSource: company.emailSource || company.source })}`);
