@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 
-const enabled = (process.env.PROSPECT_AUTORUN || "true").toLowerCase() === "true";
+const enabled = process.env.PROSPECT_AUTORUN === "true" && process.env.PROSPECT_ACK_DUPLICATE_GUARD === "true" && process.env.PROSPECT_OPT_OUT_READY === "true";
 const timeZone = "America/Sao_Paulo";
 let running = false;
 let lastRunLocalDate = "";
@@ -77,5 +77,5 @@ if (enabled) {
   setTimeout(() => void runProspecting(), 15_000);
   scheduleNextMidnight();
 } else {
-  console.log("[prospecting] Agendador desativado por PROSPECT_AUTORUN=false.");
+  console.log("[prospecting] Agendador pausado por segurança. Para reativar, confirme deduplicação, histórico/supressões do Resend e processamento de opt-out com as variáveis PROSPECT_AUTORUN=true, PROSPECT_ACK_DUPLICATE_GUARD=true e PROSPECT_OPT_OUT_READY=true.");
 }
