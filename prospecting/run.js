@@ -10,10 +10,14 @@ if (missing.length) {
 }
 
 const DAYS = Math.max(1, Number(env.PROSPECT_DAYS || 60));
-const DAILY_LIMIT = Math.min(80, Math.max(1, Number(env.PROSPECT_DAILY_LIMIT || 80)));
+const DAILY_LIMIT = Math.min(5, Math.max(1, Number(env.PROSPECT_DAILY_LIMIT || 5)));
 const SEND_EMAILS = env.SEND_EMAILS === "true";
+if (SEND_EMAILS && env.PROSPECT_OPT_OUT_READY !== "true") {
+  console.error("[prospecting] ENVIO BLOQUEADO: o processamento de respostas SAIR/descadastro ainda precisa ser confirmado.");
+  process.exit(1);
+}
 const STATE_PATH = path.resolve(env.PROSPECT_STATE_PATH || "./data/prospecting-state.json");
-const SITE_URL = "https://daymoney.com.br";
+const SITE_URL = "https://globaltoolsfinanceirosaas.vps11710.panel.icontainer.work/";
 const CFO_URL = env.CFO_API_URL || "https://cfo.com.br/api";
 const RESEND_FROM = env.RESEND_FROM || "Base Financeira <financeiro@oolivo.com.br>";
 
@@ -125,13 +129,81 @@ Base Financeira · Mensagem de demonstração`;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const PERSONAL_MAIL_DOMAINS = new Set([
+  "gmail.com", "googlemail.com", "hotmail.com", "hotmail.com.br", "outlook.com",
+  "outlook.com.br", "live.com", "live.com.br", "yahoo.com", "yahoo.com.br",
+  "icloud.com", "me.com", "protonmail.com", "proton.me", "aol.com", "bol.com.br",
+  "uol.com.br", "terra.com.br"
+]);
+function isPersonalMailbox(email) {
+  const domain = normalizeEmail(email).split("@")[1] || "";
+  return PERSONAL_MAIL_DOMAINS.has(domain);
+}
+
+async function fetchResendCollection(resource) {
+  const all = [];
+  let after = "";
+  for (let page = 0; page < 20; page += 1) {
+    const url = new URL("https://api.resend.com/" + resource);
+    url.searchParams.set("limit", "100");
+    if (after) url.searchParams.set("after", after);
+    const response = await fetch(url, {
+      headers: { Authorization: "Bearer " + env.RESEND_API_KEY, Accept: "application/json" },
+      signal: AbortSignal.timeout(30000)
+    });
+    if (!response.ok) throw new Error("Resend preflight GET /" + resource + " falhou com HTTP " + response.status + "; nenhum envio foi iniciado.");
+    const payload = await response.json();
+    const batch = Array.isArray(payload.data) ? payload.data : [];
+    all.push(...batch);
+    if (payload.has_more !== true || batch.length === 0) return all;
+    const next = batch[batch.length - 1]?.id;
+    if (!next || next === after) throw new Error("Paginação de /" + resource + " inconclusiva; nenhum envio foi iniciado.");
+    after = next;
+  }
+  throw new Error("O histórico de /" + resource + " excede o limite de segurança da verificação; nenhum envio foi iniciado.");
+}
+
+async function loadResendSafetyState() {
+  const results = await Promise.all([
+    fetchResendCollection("emails"),
+    fetchResendCollection("suppressions")
+  ]);
+  const history = results[0];
+  const suppressions = results[1];
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  const recentIssues = history.filter((item) => {
+    const status = String(item.status || "").toLowerCase();
+    const createdAt = Date.parse(item.created_at || item.createdAt || "");
+    const recent = !Number.isFinite(createdAt) || createdAt >= cutoff;
+    return recent && ["failed", "bounced", "complained", "suppressed"].includes(status);
+  });
+  const recentBadSuppressions = suppressions.filter((item) => {
+    const origin = String(item.origin || "").toLowerCase();
+    const createdAt = Date.parse(item.created_at || "");
+    return ["bounce", "complaint"].includes(origin) && (!Number.isFinite(createdAt) || createdAt >= cutoff);
+  });
+  if (SEND_EMAILS && (recentIssues.length > 0 || recentBadSuppressions.length > 0)) {
+    throw new Error("Envio pausado: o histórico recente do Resend contém " + recentIssues.length + " mensagem(ns) com falha/bounce/reclamação e " + recentBadSuppressions.length + " supressão(ões) recente(s) por bounce/reclamação.");
+  }
+  const previouslySent = new Set();
+  for (const item of history) {
+    const recipients = Array.isArray(item.to) ? item.to : (item.to ? [item.to] : []);
+    for (const recipient of recipients) {
+      previouslySent.add(normalizeEmail(typeof recipient === "string" ? recipient : recipient?.email));
+    }
+  }
+  const suppressed = new Set(suppressions.map((item) => normalizeEmail(item.email || item.address)).filter(Boolean));
+  return { history, previouslySent, suppressed, recentIssues: recentIssues.length, recentBadSuppressions: recentBadSuppressions.length };
+}
+
+
 async function sendEmail(to, content) {
   // Envia em ritmo conservador para não atingir o limite de requisições do Resend.
   for (let attempt = 0; attempt < 4; attempt += 1) {
     await sleep(10_000);
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json", "Idempotency-Key": "prospect-" + new Date().toISOString().slice(0, 10) + "-" + normalizeEmail(to).replace(/[^a-z0-9]/g, "-") },
       body: JSON.stringify({ from: RESEND_FROM, to: [to], subject: content.subject, html: content.html, text: content.text }),
       signal: AbortSignal.timeout(30000)
     });
@@ -150,11 +222,15 @@ async function sendEmail(to, content) {
 
 const state = await readState();
 state.lastRun = new Date().toISOString();
+const resendSafety = await loadResendSafetyState();
+if (resendSafety.recentIssues || resendSafety.recentBadSuppressions) {
+  console.warn("[prospecting] ALERTA: " + resendSafety.recentIssues + " falha(s) recente(s) e " + resendSafety.recentBadSuppressions + " supressão(ões) recente(s); o envio fica bloqueado até revisão.");
+}
 const rows = await fetchCompanies();
 const today = new Date().toISOString().slice(0, 10);
 const sentToday = Object.values(state.sent).filter((item) => String(item.sentAt || "").slice(0, 10) === today).length;
 const remainingToday = Math.max(0, DAILY_LIMIT - sentToday);
-const knownPreviouslySent = new Set([
+const legacyPreviouslySent = new Set([
   "isaquemoreira.castelan@gmail.com",
   "rodri.luke28@gmail.com",
   "lourivalsilvestre194@gmail.com",
@@ -165,12 +241,30 @@ const knownPreviouslySent = new Set([
   "vitorobrito13@gmail.com",
   "gabettigiovanna6@gmail.com",
   "gb81091@gmail.com"
+].map(normalizeEmail));
+const knownSentEmails = new Set([
+  ...legacyPreviouslySent,
+  ...resendSafety.previouslySent,
+  ...Object.keys(state.sent).map(normalizeEmail)
 ]);
+const knownSuppressedEmails = new Set([
+  ...resendSafety.suppressed,
+  ...Object.keys(state.suppressed).map(normalizeEmail)
+]);
+const knownSentCnpjs = new Set(Object.values(state.sent).map((item) => String(item.cnpj || "")));
+const seenEmails = new Set();
+const seenCnpjs = new Set();
 const candidates = rows.map(mapCompany).filter((c) => {
-  if (knownPreviouslySent.has(c.email)) return false;
+  c.email = normalizeEmail(c.email);
   if (!c.cnpj || c.cnpj.length !== 14 || !c.name || !validEmail(c.email) || !c.openedAt || c.contactMasked) return false;
+  if (isPersonalMailbox(c.email)) return false;
+  if (knownSentEmails.has(c.email) || knownSuppressedEmails.has(c.email) || knownSentCnpjs.has(c.cnpj)) return false;
   const ageDays = (Date.now() - c.openedAt.getTime()) / 86400000;
-  return ageDays >= 0 && ageDays <= DAYS && !state.sent[c.email] && !state.suppressed[c.email];
+  if (ageDays < 0 || ageDays > DAYS) return false;
+  if (seenEmails.has(c.email) || seenCnpjs.has(c.cnpj)) return false;
+  seenEmails.add(c.email);
+  seenCnpjs.add(c.cnpj);
+  return true;
 }).slice(0, remainingToday);
 
 console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, companies_found: rows.length, eligible: candidates.length, daily_limit: DAILY_LIMIT, sent_today_before_run: sentToday, remaining_today_before_run: remainingToday }, null, 2));
