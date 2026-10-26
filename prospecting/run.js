@@ -10,7 +10,11 @@ if (missing.length) {
 }
 
 const DAYS = Math.max(1, Number(env.PROSPECT_DAYS || 60));
-const DAILY_LIMIT = Math.min(70, Math.max(1, Number(env.PROSPECT_DAILY_LIMIT || 70)));
+const PLAN_MONTHLY_SEARCH_QUOTA = Math.max(1, Number(env.CFO_MONTHLY_SEARCH_QUOTA || 2000));
+const PLAN_MONTHLY_LEAD_QUOTA = Math.max(1, Number(env.CFO_MONTHLY_LEAD_QUOTA || 10000));
+const DAILY_SEARCH_BUDGET = Math.floor(PLAN_MONTHLY_SEARCH_QUOTA / 30);
+const DAILY_LEAD_BUDGET = Math.floor(PLAN_MONTHLY_LEAD_QUOTA / 30);
+const DAILY_LIMIT = Math.min(70, DAILY_LEAD_BUDGET, Math.max(1, Number(env.PROSPECT_DAILY_LIMIT || 70)));
 const SEND_EMAILS = env.SEND_EMAILS === "true";
 if (SEND_EMAILS && env.PROSPECT_OPT_OUT_READY !== "true") {
   console.error("[prospecting] ENVIO BLOQUEADO: o processamento de respostas SAIR/descadastro ainda precisa ser confirmado.");
@@ -90,7 +94,8 @@ async function fetchCompanies() {
   // deduplicando por CNPJ e encerrando se a API repetir a mesma página.
   const allRows = [];
   const seen = new Set();
-  const maxPages = Math.max(1, Math.min(20, Number(env.CFO_MAX_PAGES || 10)));
+  const configuredMaxPages = Math.max(1, Math.min(20, Number(env.CFO_MAX_PAGES || 10)));
+  const maxPages = Math.max(1, Math.min(configuredMaxPages, DAILY_SEARCH_BUDGET));
   for (let page = 1; page <= maxPages; page += 1) {
     const params = new URLSearchParams({
       resource: "empresas", dias: String(DAYS), per_page: "100",
@@ -310,7 +315,7 @@ const rows = quotaPauseReason ? [] : await fetchCompanies();
 const today = localDateKey(new Date());
 const targetOpeningDate = previousBusinessDayKey(new Date());
 const requestedTargetDates = String(env.PROSPECT_TARGET_DATES || "").split(",").map((value) => value.trim()).filter((value) => value.length === 10 && value[4] === "-" && value[7] === "-" && !Number.isNaN(Date.parse(value + "T12:00:00Z")));
-const backfillDays = Math.max(0, Math.min(31, Number(env.PROSPECT_BACKFILL_DAYS || 0)));
+const backfillDays = Math.max(0, Math.min(31, Number(env.PROSPECT_BACKFILL_DAYS ?? 31)));
 const targetOpeningDates = new Set(requestedTargetDates.length ? requestedTargetDates : backfillDays > 0 ? Array.from({ length: backfillDays + 1 }, (_, i) => { const d = new Date(localDateKey(new Date()) + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() - i); return d.toISOString().slice(0, 10); }) : [targetOpeningDate]);
 const sentToday = Object.values(state.sent).filter((item) => item.sentAt && !Number.isNaN(Date.parse(item.sentAt)) && localDateKey(new Date(item.sentAt)) === today).length;
 const remainingToday = Math.max(0, DAILY_LIMIT - sentToday);
@@ -379,7 +384,7 @@ const filteredCandidates = mappedRows.filter((c, index) => {
 filterCounts.eligible_before_limit = filteredCandidates.length;
 const candidates = filteredCandidates.slice(0, remainingToday);
 
-console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, target_opening_dates: [...targetOpeningDates], target_opening_date: targetOpeningDate, companies_found: rows.length, cfo_quota_headers: cfoQuotaHeaders, cfo_meta: cfoMeta, quota_pause_reason: quotaPauseReason || null, filter_counts: filterCounts, invalid_reasons: invalidReasons, contact_mask_values: contactMaskValues, invalid_examples: invalidExamples, eligible: candidates.length, daily_limit: DAILY_LIMIT, sent_today_before_run: sentToday, remaining_today_before_run: remainingToday }, null, 2));
+console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, target_opening_dates: [...targetOpeningDates], target_opening_date: targetOpeningDate, companies_found: rows.length, cfo_quota_headers: cfoQuotaHeaders, cfo_meta: cfoMeta, quota_pause_reason: quotaPauseReason || null, plan_daily_budgets: { searches: DAILY_SEARCH_BUDGET, leads: DAILY_LEAD_BUDGET, email_send_limit: DAILY_LIMIT, max_search_pages_this_run: Math.max(1, Math.min(Math.max(1, Math.min(20, Number(env.CFO_MAX_PAGES || 10))), DAILY_SEARCH_BUDGET)) }, filter_counts: filterCounts, invalid_reasons: invalidReasons, contact_mask_values: contactMaskValues, invalid_examples: invalidExamples, eligible: candidates.length, daily_limit: DAILY_LIMIT, sent_today_before_run: sentToday, remaining_today_before_run: remainingToday }, null, 2));
 let sent = 0;
 for (const company of candidates) {
   console.log(`CANDIDATE ${JSON.stringify({ name: company.name, cnpj: company.cnpj, openedAt: company.openedAt.toISOString().slice(0, 10), email: company.email, source: company.source, emailSource: company.emailSource || company.source })}`);
