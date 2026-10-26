@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 
-const enabled = process.env.PROSPECT_AUTORUN === "true" && process.env.PROSPECT_ACK_DUPLICATE_GUARD === "true" && process.env.PROSPECT_OPT_OUT_READY === "true";
+const enabled = process.env.PROSPECT_AUTORUN === "true" && process.env.PROSPECT_ACK_DUPLICATE_GUARD === "true" && process.env.PROSPECT_OPT_OUT_READY === "true" && Boolean(process.env.PROSPECT_REPLY_TO) && Boolean(process.env.RESEND_WEBHOOK_SECRET);
 const timeZone = "America/Sao_Paulo";
 let running = false;
 let lastRunLocalDate = "";
@@ -76,5 +76,5 @@ if (enabled) {
   console.log("[prospecting] Agendador ativo: execução diária à meia-noite de Brasília. Não haverá envio imediato na inicialização/reinicialização do servidor.");
   scheduleNextMidnight();
 } else {
-  console.log("[prospecting] Agendador pausado por segurança. Para reativar, confirme deduplicação, histórico/supressões do Resend e processamento de opt-out com as variáveis PROSPECT_AUTORUN=true, PROSPECT_ACK_DUPLICATE_GUARD=true e PROSPECT_OPT_OUT_READY=true.");
+  console.log("[prospecting] Agendador pausado por segurança. Exige as três confirmações, PROSPECT_REPLY_TO e RESEND_WEBHOOK_SECRET configurados; teste o recebimento de SAIR antes de ativar.");
 }
