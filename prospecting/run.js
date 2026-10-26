@@ -241,6 +241,8 @@ async function sendEmail(to, content) {
 }
 
 const state = await readState();
+state.sent ||= {};
+state.suppressed ||= {};
 state.lastRun = new Date().toISOString();
 const resendSafety = await loadResendSafetyState();
 if (resendSafety.recentIssues || resendSafety.recentBadSuppressions) {
@@ -249,7 +251,7 @@ if (resendSafety.recentIssues || resendSafety.recentBadSuppressions) {
 const rows = await fetchCompanies();
 const today = localDateKey(new Date());
 const targetOpeningDate = previousBusinessDayKey(new Date());
-const sentToday = Object.values(state.sent).filter((item) => String(item.sentAt || "").slice(0, 10) === today).length;
+const sentToday = Object.values(state.sent).filter((item) => item.sentAt && !Number.isNaN(Date.parse(item.sentAt)) && localDateKey(new Date(item.sentAt)) === today).length;
 const remainingToday = Math.max(0, DAILY_LIMIT - sentToday);
 const legacyPreviouslySent = new Set([
   "isaquemoreira.castelan@gmail.com",
