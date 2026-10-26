@@ -24,7 +24,7 @@ const STATE_PATH = path.resolve(env.PROSPECT_STATE_PATH || "./data/prospecting-s
 const SITE_URL = (env.PUBLIC_SITE_URL || "https://daymoney.com.br").replace(/\/$/, "") + "/";
 const CFO_URL = env.CFO_API_URL || "https://cfo.com.br/api";
 const cfoQuotaHeaders = {};
-const CFO_META_URL = env.CFO_META_URL || "https://cfo.com.br/v1/meta";
+const CFO_META_URL = env.CFO_META_URL || "https://cfo.com.br/api?resource=meta";
 async function fetchCfoMeta() {
   try {
     const response = await fetch(CFO_META_URL, {
@@ -294,7 +294,19 @@ const resendSafety = await loadResendSafetyState();
 if (resendSafety.recentIssues || resendSafety.recentBadSuppressions) {
   console.warn("[prospecting] ALERTA: " + resendSafety.recentIssues + " falha(s) recente(s) e " + resendSafety.recentBadSuppressions + " supressão(ões) recente(s); o envio fica bloqueado até revisão.");
 }
-const [rows, cfoMeta] = await Promise.all([fetchCompanies(), fetchCfoMeta()]);
+const cfoMeta = await fetchCfoMeta();
+const usage = cfoMeta?.account?.usage_this_month || {};
+const searchRemaining = Number(usage.remaining ?? cfoMeta?.account?.limits?.monthly_quota);
+const leadsRemaining = Number(usage.leads_remaining ?? cfoMeta?.account?.limits?.lead_quota);
+let quotaPauseReason = "";
+if (cfoMeta?.http_status && cfoMeta.http_status !== 200) {
+  quotaPauseReason = "CFO_META_UNAVAILABLE";
+} else if (Number.isFinite(searchRemaining) && searchRemaining <= 0) {
+  quotaPauseReason = "CFO_MONTHLY_SEARCH_QUOTA_EXHAUSTED";
+} else if (Number.isFinite(leadsRemaining) && leadsRemaining <= 0) {
+  quotaPauseReason = "CFO_MONTHLY_LEAD_QUOTA_EXHAUSTED";
+}
+const rows = quotaPauseReason ? [] : await fetchCompanies();
 const today = localDateKey(new Date());
 const targetOpeningDate = previousBusinessDayKey(new Date());
 const requestedTargetDates = String(env.PROSPECT_TARGET_DATES || "").split(",").map((value) => value.trim()).filter((value) => value.length === 10 && value[4] === "-" && value[7] === "-" && !Number.isNaN(Date.parse(value + "T12:00:00Z")));
@@ -367,7 +379,7 @@ const filteredCandidates = mappedRows.filter((c, index) => {
 filterCounts.eligible_before_limit = filteredCandidates.length;
 const candidates = filteredCandidates.slice(0, remainingToday);
 
-console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, target_opening_dates: [...targetOpeningDates], target_opening_date: targetOpeningDate, companies_found: rows.length, cfo_quota_headers: cfoQuotaHeaders, cfo_meta: cfoMeta, filter_counts: filterCounts, invalid_reasons: invalidReasons, contact_mask_values: contactMaskValues, invalid_examples: invalidExamples, eligible: candidates.length, daily_limit: DAILY_LIMIT, sent_today_before_run: sentToday, remaining_today_before_run: remainingToday }, null, 2));
+console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, target_opening_dates: [...targetOpeningDates], target_opening_date: targetOpeningDate, companies_found: rows.length, cfo_quota_headers: cfoQuotaHeaders, cfo_meta: cfoMeta, quota_pause_reason: quotaPauseReason || null, filter_counts: filterCounts, invalid_reasons: invalidReasons, contact_mask_values: contactMaskValues, invalid_examples: invalidExamples, eligible: candidates.length, daily_limit: DAILY_LIMIT, sent_today_before_run: sentToday, remaining_today_before_run: remainingToday }, null, 2));
 let sent = 0;
 for (const company of candidates) {
   console.log(`CANDIDATE ${JSON.stringify({ name: company.name, cnpj: company.cnpj, openedAt: company.openedAt.toISOString().slice(0, 10), email: company.email, source: company.source, emailSource: company.emailSource || company.source })}`);
