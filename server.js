@@ -1,4 +1,5 @@
 import http from "node:http";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { readFile, writeFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,6 +22,58 @@ const types = {
 
 const server = http.createServer(async (req, res) => {
   const requestUrl = new URL(req.url || "/", "http://localhost");
+  if (requestUrl.pathname === "/webhooks/resend-inbound" && req.method === "POST") {
+    try {
+      const rawBody = await readRequestRaw(req, 100_000);
+      if (!verifyResendWebhook(req.headers, rawBody, process.env.RESEND_WEBHOOK_SECRET)) {
+        return json(res, 401, { error: "Assinatura do webhook inválida." });
+      }
+      const event = JSON.parse(rawBody);
+      if (event.type !== "email.received") return json(res, 200, { ok: true, ignored: true });
+      const emailId = String(event.data?.email_id || "");
+      if (!emailId) return json(res, 400, { error: "Evento sem email_id." });
+      if (!process.env.RESEND_API_KEY) return json(res, 503, { error: "RESEND_API_KEY não configurada." });
+      const response = await fetch("https://api.resend.com/emails/receiving/" + encodeURIComponent(emailId), {
+        headers: { Authorization: "Bearer " + process.env.RESEND_API_KEY, Accept: "application/json" },
+        signal: AbortSignal.timeout(15000)
+      });
+      const received = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        console.error("[opt-out] Não foi possível recuperar e-mail recebido:", response.status);
+        return json(res, 502, { error: "Não foi possível ler o e-mail recebido." });
+      }
+      const sender = normalizeInboundEmail(received.from || event.data?.from);
+      const bodyText = String(received.text || stripHtml(received.html || ""));
+      const firstBodyLine = bodyText.replace(/\r/g, "").split("\n")
+        .map((line) => line.trim())
+        .find((line) => line && !line.startsWith(">") && !/^on .+wrote:$/i.test(line) && !/^em .+escreveu:$/i.test(line)) || "";
+      const subject = String(received.subject || event.data?.subject || "").replace(/^(re|res|fw|fwd):\s*/i, "").trim();
+      const isOptOut = isOptOutCommand(firstBodyLine) || (!firstBodyLine && isOptOutCommand(subject));
+      if (!sender || !isOptOut) return json(res, 200, { ok: true, ignored: true });
+      const statePath = path.resolve(root, process.env.PROSPECT_STATE_PATH || "./data/prospecting-state.json");
+      await mkdir(path.dirname(statePath), { recursive: true });
+      let state = { sent: {}, suppressed: {}, lastRun: null };
+      try {
+        state = JSON.parse(await readFile(statePath, "utf8"));
+      } catch (error) {
+        if (error.code !== "ENOENT") throw error;
+      }
+      state.sent ||= {};
+      state.suppressed ||= {};
+      state.suppressed[sender] = {
+        requestedAt: new Date().toISOString(),
+        source: "resend_inbound_reply",
+        subject: subject.slice(0, 200)
+      };
+      await writeFile(statePath, JSON.stringify(state, null, 2) + "\n", { mode: 0o600 });
+      console.log("[opt-out] Descadastro registrado para", sender);
+      return json(res, 200, { ok: true, unsubscribed: true });
+    } catch (error) {
+      console.error("[opt-out] Falha no processamento do webhook:", error.message);
+      return json(res, 500, { error: "Falha ao processar o webhook." });
+    }
+  }
+
   if (requestUrl.pathname === "/api/status" && req.method === "GET") {
     return json(res, 200, { ok: true, checkout: Boolean(process.env.STRIPE_SECRET_KEY), service: "globaltools-financeiro-saas" });
   }
@@ -169,6 +222,61 @@ const server = http.createServer(async (req, res) => {
 });
 
 
+
+async function readRequestRaw(req, maxBytes = 100_000) {
+  let raw = "";
+  for await (const chunk of req) {
+    raw += chunk.toString("utf8");
+    if (Buffer.byteLength(raw, "utf8") > maxBytes) throw new Error("Webhook muito grande.");
+  }
+  return raw;
+}
+
+function verifyResendWebhook(headers, rawBody, secret) {
+  if (!secret) return false;
+  const id = String(headers["svix-id"] || "");
+  const timestamp = String(headers["svix-timestamp"] || "");
+  const signatureHeader = String(headers["svix-signature"] || "");
+  const timestampSeconds = Number(timestamp);
+  if (!id || !timestamp || !signatureHeader || !Number.isFinite(timestampSeconds)) return false;
+  if (Math.abs(Date.now() / 1000 - timestampSeconds) > 300) return false;
+  try {
+    const encodedSecret = String(secret).replace(/^whsec_/, "");
+    const key = Buffer.from(encodedSecret, "base64");
+    const expected = createHmac("sha256", key).update(id + "." + timestamp + "." + rawBody).digest("base64");
+    return signatureHeader.split(" ").some((entry) => {
+      const [version, value] = entry.split(",");
+      if (version !== "v1" || !value) return false;
+      const actualBuffer = Buffer.from(value);
+      const expectedBuffer = Buffer.from(expected);
+      return actualBuffer.length === expectedBuffer.length && timingSafeEqual(actualBuffer, expectedBuffer);
+    });
+  } catch {
+    return false;
+  }
+}
+
+function normalizeInboundEmail(value) {
+  const raw = String(value || "").trim();
+  const bracketed = raw.match(/<([^<>\s]+@[^<>\s]+)>/);
+  const email = (bracketed ? bracketed[1] : raw).trim().toLowerCase();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : "";
+}
+
+function isOptOutCommand(value) {
+  return /^(sair|parar|cancelar|descadastrar|remover|unsubscribe)(?:\s+por favor)?[\s.!,:;-]*$/i.test(String(value || "").trim());
+}
+
+function stripHtml(value) {
+  return String(value || "")
+    .replace(/<\s*br\s*\/?\s*>/gi, "\n")
+    .replace(/<\/(p|div|tr|li)\s*>/gi, "\n")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">");
+}
 
 async function readRequestJson(req) {
   let raw = "";
