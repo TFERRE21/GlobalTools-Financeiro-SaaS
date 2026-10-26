@@ -48,6 +48,15 @@ function previousBusinessDayKey(now = new Date()) {
   return cursor.toISOString().slice(0, 10);
 }
 const first = (...values) => values.find((v) => v !== undefined && v !== null && String(v).trim() !== "");
+function isContactMasked(value) {
+  if (value === true || value === 1) return true;
+  if (value === false || value === 0 || value == null) return false;
+  const normalized = String(value).trim().toLowerCase();
+  if (["false", "0", "nao", "não", "no", "n", "off", ""].includes(normalized)) return false;
+  if (["true", "1", "sim", "yes", "y", "on"].includes(normalized)) return true;
+  // Unknown values must be reviewed rather than treated as proof that contact is revealed.
+  return true;
+}
 
 async function readState() {
   try {
@@ -104,7 +113,7 @@ function mapCompany(row) {
   const name = String(first(row.nome_fantasia, row.razao_social, row.nome, row.name) || "").trim();
   const email = normalizeEmail(first(row.contato?.email, row.email, row.email_contato, row.email_comercial, row.contato_email));
   const openedAt = asDate(first(row.data_inicio, row.data_abertura, row.abertura, row.data_inicio_atividade, row.opening_date));
-  return { cnpj, name, email, openedAt, source: CFO_URL, emailSource: CFO_URL, contactMasked: Boolean(row.contato_mascarado) };
+  return { cnpj, name, email, openedAt, source: CFO_URL, emailSource: CFO_URL, contactMasked: isContactMasked(row.contato_mascarado), contactMaskedRawType: row.contato_mascarado === null ? "null" : Array.isArray(row.contato_mascarado) ? "array" : typeof row.contato_mascarado, contactMaskedRaw: row.contato_mascarado };
 }
 function emailContent(company) {
   const safeName = company.name.replace(/[<>]/g, "").slice(0, 120) || "sua empresa";
@@ -305,7 +314,14 @@ const seenCnpjs = new Set();
 const filterCounts = { invalid_data: 0, personal_email: 0, already_sent_or_suppressed: 0, opening_date_outside_target: 0, duplicate_in_batch: 0, eligible_before_limit: 0 };
 const invalidReasons = { cnpj_missing_or_invalid: 0, name_missing: 0, email_missing_or_invalid: 0, opening_date_missing_or_invalid: 0, contact_masked: 0 };
 const invalidExamples = [];
-const mappedRows = rows.map(mapCompany);
+const contactMaskValues = {};
+const mappedRows = rows.map((row) => {
+  const mapped = mapCompany(row);
+  const raw = row.contato_mascarado;
+  const key = raw === null ? "null" : raw === undefined ? "undefined" : `${typeof raw}:${String(raw).trim().toLowerCase().slice(0, 24)}`;
+  contactMaskValues[key] = (contactMaskValues[key] || 0) + 1;
+  return mapped;
+});
 const filteredCandidates = mappedRows.filter((c, index) => {
   c.email = normalizeEmail(c.email);
   const reasons = [];
@@ -336,7 +352,7 @@ const filteredCandidates = mappedRows.filter((c, index) => {
 filterCounts.eligible_before_limit = filteredCandidates.length;
 const candidates = filteredCandidates.slice(0, remainingToday);
 
-console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, target_opening_dates: [...targetOpeningDates], target_opening_date: targetOpeningDate, companies_found: rows.length, filter_counts: filterCounts, invalid_reasons: invalidReasons, invalid_examples: invalidExamples, eligible: candidates.length, daily_limit: DAILY_LIMIT, sent_today_before_run: sentToday, remaining_today_before_run: remainingToday }, null, 2));
+console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, target_opening_dates: [...targetOpeningDates], target_opening_date: targetOpeningDate, companies_found: rows.length, filter_counts: filterCounts, invalid_reasons: invalidReasons, contact_mask_values: contactMaskValues, invalid_examples: invalidExamples, eligible: candidates.length, daily_limit: DAILY_LIMIT, sent_today_before_run: sentToday, remaining_today_before_run: remainingToday }, null, 2));
 let sent = 0;
 for (const company of candidates) {
   console.log(`CANDIDATE ${JSON.stringify({ name: company.name, cnpj: company.cnpj, openedAt: company.openedAt.toISOString().slice(0, 10), email: company.email, source: company.source, emailSource: company.emailSource || company.source })}`);
