@@ -289,7 +289,7 @@ const mappedRows = rows.map(mapCompany);
 const filteredCandidates = mappedRows.filter((c) => {
   c.email = normalizeEmail(c.email);
   if (!c.cnpj || c.cnpj.length !== 14 || !c.name || !validEmail(c.email) || !c.openedAt || c.contactMasked) { filterCounts.invalid_data++; return false; }
-  if (isPersonalMailbox(c.email)) { filterCounts.personal_email++; return false; }
+  // Não descartar contato válido apenas porque usa Gmail/Hotmail; duplicidade e descadastro seguem bloqueados.
   if (knownSentEmails.has(c.email) || knownSuppressedEmails.has(c.email) || knownSentCnpjs.has(c.cnpj)) { filterCounts.already_sent_or_suppressed++; return false; }
   // Por padrão processa o dia útil imediatamente anterior. Para uma busca retroativa pontual,
   // PROSPECT_TARGET_DATES aceita datas YYYY-MM-DD separadas por vírgula.
