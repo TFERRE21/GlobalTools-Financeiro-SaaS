@@ -135,7 +135,7 @@ const server = http.createServer(async (req, res) => {
         if (savedQuota.date === today && Array.isArray(savedQuota.sessions)) quota = savedQuota;
       } catch {}
       if (quota.sessions.includes(session.id)) return json(res, 200, { ok: true, message: "Esta compra já teve o envio processado." });
-      if (quota.sessions.length >= 60) return json(res, 429, { error: "Limite diário de envios da planilha atingido. O envio será retomado no próximo dia; entre em contato com o suporte se precisar do arquivo antes." });
+      if (quota.sessions.length >= 30) return json(res, 429, { error: "Reserva diária de 30 envios para compras da planilha atingida. O envio será retomado no próximo dia; entre em contato com o suporte se precisar do arquivo antes." });
       const file = await readFile(path.join(root, "downloads", "Controle_Financeiro_Preview.xlsx"));
       const resendResponse = await fetch("https://api.resend.com/emails", {
         method: "POST",
