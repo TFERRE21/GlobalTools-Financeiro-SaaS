@@ -17,7 +17,7 @@ if (SEND_EMAILS && env.PROSPECT_OPT_OUT_READY !== "true") {
   process.exit(1);
 }
 const STATE_PATH = path.resolve(env.PROSPECT_STATE_PATH || "./data/prospecting-state.json");
-const SITE_URL = "https://globaltoolsfinanceirosaas.vps11710.panel.icontainer.work/";
+const SITE_URL = (env.PUBLIC_SITE_URL || "https://daymoney.com.br").replace(/\/$/, "") + "/";
 const CFO_URL = env.CFO_API_URL || "https://cfo.com.br/api";
 const RESEND_FROM = env.RESEND_FROM || "Base Financeira <financeiro@oolivo.com.br>";
 
@@ -28,6 +28,21 @@ const asDate = (value) => {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 };
+const localDateKey = (date) => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit"
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+};
+function previousBusinessDayKey(now = new Date()) {
+  const todayKey = localDateKey(now);
+  const cursor = new Date(`${todayKey}T12:00:00Z`);
+  do {
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  } while (cursor.getUTCDay() === 0 || cursor.getUTCDay() === 6);
+  return cursor.toISOString().slice(0, 10);
+}
 const first = (...values) => values.find((v) => v !== undefined && v !== null && String(v).trim() !== "");
 
 async function readState() {
@@ -208,7 +223,7 @@ async function sendEmail(to, content) {
     await sleep(10_000);
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json", "Idempotency-Key": "prospect-" + new Date().toISOString().slice(0, 10) + "-" + normalizeEmail(to).replace(/[^a-z0-9]/g, "-") },
+      headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json", "Idempotency-Key": "prospect-" + normalizeEmail(to).replace(/[^a-z0-9]/g, "-") },
       body: JSON.stringify({ from: RESEND_FROM, to: [to], subject: content.subject, html: content.html, text: content.text }),
       signal: AbortSignal.timeout(30000)
     });
@@ -232,7 +247,8 @@ if (resendSafety.recentIssues || resendSafety.recentBadSuppressions) {
   console.warn("[prospecting] ALERTA: " + resendSafety.recentIssues + " falha(s) recente(s) e " + resendSafety.recentBadSuppressions + " supressão(ões) recente(s); o envio fica bloqueado até revisão.");
 }
 const rows = await fetchCompanies();
-const today = new Date().toISOString().slice(0, 10);
+const today = localDateKey(new Date());
+const targetOpeningDate = previousBusinessDayKey(new Date());
 const sentToday = Object.values(state.sent).filter((item) => String(item.sentAt || "").slice(0, 10) === today).length;
 const remainingToday = Math.max(0, DAILY_LIMIT - sentToday);
 const legacyPreviouslySent = new Set([
@@ -264,15 +280,16 @@ const candidates = rows.map(mapCompany).filter((c) => {
   if (!c.cnpj || c.cnpj.length !== 14 || !c.name || !validEmail(c.email) || !c.openedAt || c.contactMasked) return false;
   if (isPersonalMailbox(c.email)) return false;
   if (knownSentEmails.has(c.email) || knownSuppressedEmails.has(c.email) || knownSentCnpjs.has(c.cnpj)) return false;
-  const ageDays = (Date.now() - c.openedAt.getTime()) / 86400000;
-  if (ageDays < 0 || ageDays > DAYS) return false;
+  // Processa somente empresas abertas no dia útil imediatamente anterior.
+  // Segunda-feira considera sexta-feira; sábado/domingo são ignorados.
+  if (localDateKey(c.openedAt) !== targetOpeningDate) return false;
   if (seenEmails.has(c.email) || seenCnpjs.has(c.cnpj)) return false;
   seenEmails.add(c.email);
   seenCnpjs.add(c.cnpj);
   return true;
 }).slice(0, remainingToday);
 
-console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, companies_found: rows.length, eligible: candidates.length, daily_limit: DAILY_LIMIT, sent_today_before_run: sentToday, remaining_today_before_run: remainingToday }, null, 2));
+console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, target_opening_date: targetOpeningDate, companies_found: rows.length, eligible: candidates.length, daily_limit: DAILY_LIMIT, sent_today_before_run: sentToday, remaining_today_before_run: remainingToday }, null, 2));
 let sent = 0;
 for (const company of candidates) {
   console.log(`CANDIDATE ${JSON.stringify({ name: company.name, cnpj: company.cnpj, openedAt: company.openedAt.toISOString().slice(0, 10), email: company.email, source: company.source, emailSource: company.emailSource || company.source })}`);
@@ -291,4 +308,4 @@ for (const company of candidates) {
   }
 }
 await saveState(state);
-console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", eligible: candidates.length, sent, daily_limit: DAILY_LIMIT, sent_today_total: sentToday + sent, state_file: STATE_PATH }, null, 2));
+console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", target_opening_date: targetOpeningDate, eligible: candidates.length, sent, daily_limit: DAILY_LIMIT, sent_today_total: sentToday + sent, state_file: STATE_PATH }, null, 2));
