@@ -255,8 +255,9 @@ if (resendSafety.recentIssues || resendSafety.recentBadSuppressions) {
 const rows = await fetchCompanies();
 const today = localDateKey(new Date());
 const targetOpeningDate = previousBusinessDayKey(new Date());
-const requestedTargetDates = String(env.PROSPECT_TARGET_DATES || "").split(",").map((value) => value.trim()).filter((value) => /^\\d{4}-\\d{2}-\\d{2}$/.test(value));
-const targetOpeningDates = new Set(requestedTargetDates.length ? requestedTargetDates : [targetOpeningDate]);
+const requestedTargetDates = String(env.PROSPECT_TARGET_DATES || "").split(",").map((value) => value.trim()).filter((value) => value.length === 10 && value[4] === "-" && value[7] === "-" && !Number.isNaN(Date.parse(value + "T12:00:00Z")));
+const backfillDays = Math.max(0, Math.min(31, Number(env.PROSPECT_BACKFILL_DAYS || 0)));
+const targetOpeningDates = new Set(requestedTargetDates.length ? requestedTargetDates : backfillDays > 0 ? Array.from({ length: backfillDays + 1 }, (_, i) => { const d = new Date(localDateKey(new Date()) + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() - i); return d.toISOString().slice(0, 10); }) : [targetOpeningDate]);
 const sentToday = Object.values(state.sent).filter((item) => item.sentAt && !Number.isNaN(Date.parse(item.sentAt)) && localDateKey(new Date(item.sentAt)) === today).length;
 const remainingToday = Math.max(0, DAILY_LIMIT - sentToday);
 const legacyPreviouslySent = new Set([
