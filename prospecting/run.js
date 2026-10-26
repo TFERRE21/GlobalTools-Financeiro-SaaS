@@ -62,26 +62,42 @@ async function saveState(state) {
   await writeFile(STATE_PATH, JSON.stringify(state, null, 2) + "\n", { mode: 0o600 });
 }
 async function fetchCompanies() {
-  // Usa a consulta original da CFO: a paginação acrescentada recentemente não foi
-  // confirmada na API e pode devolver páginas com estrutura diferente/incompleta.
-  const params = new URLSearchParams({
-    resource: "empresas",
-    dias: String(DAYS),
-    per_page: "100",
-    reveal: "1",
-    sit: "2"
-  });
-  if (env.CFO_UF) params.set("uf", env.CFO_UF);
-  if (env.CFO_CNAE) params.set("cnae", env.CFO_CNAE);
-  const response = await fetch(`${CFO_URL}?${params}`, {
-    headers: { Authorization: `Bearer ${env.CFO_API_TOKEN}`, Accept: "application/json" },
-    signal: AbortSignal.timeout(30000)
-  });
-  if (!response.ok) throw new Error(`CFO API retornou HTTP ${response.status}; verifique chave/plano e CFO_API_URL.`);
-  const payload = await response.json();
-  const rows = Array.isArray(payload) ? payload : (payload.data || payload.empresas || payload.results || payload.items || []);
-  if (!Array.isArray(rows)) throw new Error("Formato inesperado da CFO API; nenhuma mensagem foi enviada.");
-  return rows;
+  // A busca anterior retornou 250 registros com paginação. Mantemos a paginação,
+  // deduplicando por CNPJ e encerrando se a API repetir a mesma página.
+  const allRows = [];
+  const seen = new Set();
+  const maxPages = Math.max(1, Math.min(20, Number(env.CFO_MAX_PAGES || 10)));
+  for (let page = 1; page <= maxPages; page += 1) {
+    const params = new URLSearchParams({
+      resource: "empresas", dias: String(DAYS), per_page: "100",
+      page: String(page), reveal: "1", sit: "2"
+    });
+    if (env.CFO_UF) params.set("uf", env.CFO_UF);
+    if (env.CFO_CNAE) params.set("cnae", env.CFO_CNAE);
+    const response = await fetch(`${CFO_URL}?${params}`, {
+      headers: { Authorization: `Bearer ${env.CFO_API_TOKEN}`, Accept: "application/json" },
+      signal: AbortSignal.timeout(30000)
+    });
+    if (!response.ok) throw new Error(`CFO API retornou HTTP ${response.status} na página ${page}; nenhum envio deve continuar.`);
+    const payload = await response.json();
+    const rows = Array.isArray(payload) ? payload : (payload.data || payload.empresas || payload.results || payload.items || []);
+    if (!Array.isArray(rows)) throw new Error("Formato inesperado da CFO API; nenhuma mensagem foi enviada.");
+    if (rows.length === 0) break;
+    let added = 0;
+    for (const row of rows) {
+      const key = String(first(row.cnpj, row.CNPJ, row.documento, row.numero_cnpj) || JSON.stringify(row));
+      if (seen.has(key)) continue;
+      seen.add(key);
+      allRows.push(row);
+      added += 1;
+    }
+    if (added === 0) break;
+    const meta = payload.pagination || payload.meta || {};
+    const totalPages = Number(meta.total_pages || meta.last_page || payload.total_pages || 0);
+    if (totalPages > 0 && page >= totalPages) break;
+    if (rows.length < 25 && totalPages === 0) break;
+  }
+  return allRows;
 }
 function mapCompany(row) {
   const cnpj = String(first(row.cnpj, row.CNPJ, row.documento, row.numero_cnpj) || "").replace(/\D/g, "");
@@ -287,10 +303,26 @@ const knownSentCnpjs = new Set(Object.values(state.sent).map((item) => String(it
 const seenEmails = new Set();
 const seenCnpjs = new Set();
 const filterCounts = { invalid_data: 0, personal_email: 0, already_sent_or_suppressed: 0, opening_date_outside_target: 0, duplicate_in_batch: 0, eligible_before_limit: 0 };
+const invalidReasons = { cnpj_missing_or_invalid: 0, name_missing: 0, email_missing_or_invalid: 0, opening_date_missing_or_invalid: 0, contact_masked: 0 };
+const invalidExamples = [];
 const mappedRows = rows.map(mapCompany);
-const filteredCandidates = mappedRows.filter((c) => {
+const filteredCandidates = mappedRows.filter((c, index) => {
   c.email = normalizeEmail(c.email);
-  if (!c.cnpj || c.cnpj.length !== 14 || !c.name || !validEmail(c.email) || !c.openedAt || c.contactMasked) { filterCounts.invalid_data++; return false; }
+  const reasons = [];
+  if (!c.cnpj || c.cnpj.length !== 14) reasons.push("cnpj_missing_or_invalid");
+  if (!c.name) reasons.push("name_missing");
+  if (!validEmail(c.email)) reasons.push("email_missing_or_invalid");
+  if (!c.openedAt) reasons.push("opening_date_missing_or_invalid");
+  if (c.contactMasked) reasons.push("contact_masked");
+  if (reasons.length) {
+    filterCounts.invalid_data++;
+    for (const reason of reasons) invalidReasons[reason]++;
+    if (invalidExamples.length < 8) {
+      const raw = rows[index] || {};
+      invalidExamples.push({ fields: Object.keys(raw), reasons });
+    }
+    return false;
+  }
   // Não descartar contato válido apenas porque usa Gmail/Hotmail; duplicidade e descadastro seguem bloqueados.
   if (knownSentEmails.has(c.email) || knownSuppressedEmails.has(c.email) || knownSentCnpjs.has(c.cnpj)) { filterCounts.already_sent_or_suppressed++; return false; }
   // Por padrão processa o dia útil imediatamente anterior. Para uma busca retroativa pontual,
@@ -304,7 +336,7 @@ const filteredCandidates = mappedRows.filter((c) => {
 filterCounts.eligible_before_limit = filteredCandidates.length;
 const candidates = filteredCandidates.slice(0, remainingToday);
 
-console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, target_opening_dates: [...targetOpeningDates], target_opening_date: targetOpeningDate, companies_found: rows.length, filter_counts: filterCounts, eligible: candidates.length, daily_limit: DAILY_LIMIT, sent_today_before_run: sentToday, remaining_today_before_run: remainingToday }, null, 2));
+console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, target_opening_dates: [...targetOpeningDates], target_opening_date: targetOpeningDate, companies_found: rows.length, filter_counts: filterCounts, invalid_reasons: invalidReasons, invalid_examples: invalidExamples, eligible: candidates.length, daily_limit: DAILY_LIMIT, sent_today_before_run: sentToday, remaining_today_before_run: remainingToday }, null, 2));
 let sent = 0;
 for (const company of candidates) {
   console.log(`CANDIDATE ${JSON.stringify({ name: company.name, cnpj: company.cnpj, openedAt: company.openedAt.toISOString().slice(0, 10), email: company.email, source: company.source, emailSource: company.emailSource || company.source })}`);
