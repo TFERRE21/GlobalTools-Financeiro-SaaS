@@ -224,7 +224,7 @@ async function sendEmail(to, content) {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json", "Idempotency-Key": "prospect-" + normalizeEmail(to).replace(/[^a-z0-9]/g, "-") },
-      body: JSON.stringify({ from: RESEND_FROM, to: [to], subject: content.subject, html: content.html, text: content.text }),
+      body: JSON.stringify({ from: RESEND_FROM, reply_to: env.PROSPECT_REPLY_TO || RESEND_FROM, to: [to], subject: content.subject, html: content.html, text: content.text }),
       signal: AbortSignal.timeout(30000)
     });
     const body = await response.json().catch(() => ({}));
