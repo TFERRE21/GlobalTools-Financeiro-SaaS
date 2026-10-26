@@ -78,7 +78,7 @@ function scheduleNextRun() {
 
 if (enabled) {
   console.log("[prospecting] Agendador ativo: execução diária às 10h de Brasília. Não haverá envio imediato na inicialização/reinicialização do servidor.");
-  scheduleNextMidnight();
+  scheduleNextRun();
 } else {
   console.log("[prospecting] Agendador pausado por segurança. Exige as três confirmações, PROSPECT_REPLY_TO e RESEND_WEBHOOK_SECRET configurados; teste o recebimento de SAIR antes de ativar.");
 }
