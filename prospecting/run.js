@@ -95,7 +95,7 @@ async function fetchCompanies() {
   const allRows = [];
   const seen = new Set();
   const configuredMaxPages = Math.max(1, Math.min(20, Number(env.CFO_MAX_PAGES || 10)));
-  const maxPages = Math.max(1, Math.min(configuredMaxPages, DAILY_SEARCH_BUDGET));
+  const maxPages = Math.max(1, Math.min(configuredMaxPages, DAILY_SEARCH_BUDGET, Math.max(1, Math.floor(DAILY_LEAD_BUDGET / 100))));
   for (let page = 1; page <= maxPages; page += 1) {
     const params = new URLSearchParams({
       resource: "empresas", dias: String(DAYS), per_page: "100",
