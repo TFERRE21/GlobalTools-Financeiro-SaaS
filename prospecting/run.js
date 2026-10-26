@@ -10,7 +10,7 @@ if (missing.length) {
 }
 
 const DAYS = Math.max(1, Number(env.PROSPECT_DAYS || 60));
-const DAILY_LIMIT = Math.min(5, Math.max(1, Number(env.PROSPECT_DAILY_LIMIT || 5)));
+const DAILY_LIMIT = Math.min(70, Math.max(1, Number(env.PROSPECT_DAILY_LIMIT || 70)));
 const SEND_EMAILS = env.SEND_EMAILS === "true";
 if (SEND_EMAILS && env.PROSPECT_OPT_OUT_READY !== "true") {
   console.error("[prospecting] ENVIO BLOQUEADO: o processamento de respostas SAIR/descadastro ainda precisa ser confirmado.");
