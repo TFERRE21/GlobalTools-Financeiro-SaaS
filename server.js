@@ -30,25 +30,39 @@ const server = http.createServer(async (req, res) => {
       }
       const event = JSON.parse(rawBody.toString("utf8"));
       if (event.type !== "email.received") return json(res, 200, { ok: true, ignored: true });
-      const emailId = String(event.data?.email_id || "");
-      if (!emailId) return json(res, 400, { error: "Evento sem email_id." });
-      if (!process.env.RESEND_API_KEY) return json(res, 503, { error: "RESEND_API_KEY não configurada." });
-      const response = await fetch("https://api.resend.com/emails/receiving/" + encodeURIComponent(emailId), {
-        headers: { Authorization: "Bearer " + process.env.RESEND_API_KEY, Accept: "application/json" },
-        signal: AbortSignal.timeout(15000)
-      });
-      const received = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        console.error("[opt-out] Não foi possível recuperar e-mail recebido:", response.status);
-        return json(res, 502, { error: "Não foi possível ler o e-mail recebido." });
+      const eventData = event.data || {};
+      const senderFromEvent = normalizeInboundEmail(eventData.from);
+      const subjectFromEvent = String(eventData.subject || "").replace(/^(re|res|fw|fwd):\s*/i, "").trim();
+
+      // Resend's email.received webhook includes sender and subject but not the body.
+      // If the subject itself is an opt-out command, process it without a second API call.
+      let sender = senderFromEvent;
+      let subject = subjectFromEvent;
+      let bodyText = "";
+      let isOptOut = isOptOutCommand(subjectFromEvent);
+
+      if (!isOptOut) {
+        const emailId = String(eventData.email_id || "");
+        if (!emailId) return json(res, 400, { error: "Evento sem email_id." });
+        if (!process.env.RESEND_API_KEY) return json(res, 503, { error: "RESEND_API_KEY não configurada." });
+        const response = await fetch("https://api.resend.com/emails/receiving/" + encodeURIComponent(emailId), {
+          headers: { Authorization: "Bearer " + process.env.RESEND_API_KEY, Accept: "application/json" },
+          signal: AbortSignal.timeout(15000)
+        });
+        const received = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          console.error("[opt-out] Não foi possível recuperar e-mail recebido:", response.status);
+          return json(res, 502, { error: "Não foi possível ler o e-mail recebido." });
+        }
+        sender = normalizeInboundEmail(received.from || senderFromEvent);
+        subject = String(received.subject || subjectFromEvent).replace(/^(re|res|fw|fwd):\s*/i, "").trim();
+        bodyText = String(received.text || stripHtml(received.html || ""));
+        const firstBodyLine = bodyText.replace(/\r/g, "").split("\n")
+          .map((line) => line.trim())
+          .find((line) => line && !line.startsWith(">") && !/^on .+wrote:$/i.test(line) && !/^em .+escreveu:$/i.test(line)) || "";
+        isOptOut = isOptOutCommand(firstBodyLine) || (!firstBodyLine && isOptOutCommand(subject));
       }
-      const sender = normalizeInboundEmail(received.from || event.data?.from);
-      const bodyText = String(received.text || stripHtml(received.html || ""));
-      const firstBodyLine = bodyText.replace(/\r/g, "").split("\n")
-        .map((line) => line.trim())
-        .find((line) => line && !line.startsWith(">") && !/^on .+wrote:$/i.test(line) && !/^em .+escreveu:$/i.test(line)) || "";
-      const subject = String(received.subject || event.data?.subject || "").replace(/^(re|res|fw|fwd):\s*/i, "").trim();
-      const isOptOut = isOptOutCommand(firstBodyLine) || (!firstBodyLine && isOptOutCommand(subject));
+
       if (!sender || !isOptOut) return json(res, 200, { ok: true, ignored: true });
       const statePath = path.resolve(root, process.env.PROSPECT_STATE_PATH || "./data/prospecting-state.json");
       await mkdir(path.dirname(statePath), { recursive: true });
