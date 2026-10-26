@@ -18,17 +18,21 @@ function localParts(date) {
   return Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
 }
 
-function millisecondsUntilNextMidnight() {
+function millisecondsUntilNextRun() {
   const now = new Date();
   const parts = localParts(now);
   const todayAtLocalMidnightAsUtc = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day));
-  const nextLocalMidnightAsUtc = todayAtLocalMidnightAsUtc + 24 * 60 * 60 * 1000;
   const representedNowAsUtc = Date.UTC(
     Number(parts.year), Number(parts.month) - 1, Number(parts.day),
     Number(parts.hour), Number(parts.minute)
   );
+  const targetHour = 10;
+  const targetTodayAsUtc = todayAtLocalMidnightAsUtc + targetHour * 60 * 60 * 1000;
+  const nextLocalTargetAsUtc = representedNowAsUtc < targetTodayAsUtc
+    ? targetTodayAsUtc
+    : targetTodayAsUtc + 24 * 60 * 60 * 1000;
   const offsetMinutes = (representedNowAsUtc - Math.floor(now.getTime() / 60000) * 60000) / 60000;
-  const targetUtc = nextLocalMidnightAsUtc - offsetMinutes * 60 * 1000;
+  const targetUtc = nextLocalTargetAsUtc - offsetMinutes * 60 * 1000;
   return Math.max(1000, targetUtc - now.getTime());
 }
 
@@ -57,10 +61,10 @@ async function runProspecting() {
   });
 }
 
-function scheduleNextMidnight() {
-  const delay = millisecondsUntilNextMidnight();
+function scheduleNextRun() {
+  const delay = millisecondsUntilNextRun();
   const next = new Date(Date.now() + delay);
-  console.log(`[prospecting] Próxima execução agendada para meia-noite de Brasília; em aproximadamente ${Math.round(delay / 60000)} minutos (estimativa ${next.toISOString()}).`);
+  console.log(`[prospecting] Próxima execução agendada para 10h de Brasília; em aproximadamente ${Math.round(delay / 60000)} minutos (estimativa ${next.toISOString()}).`);
   setTimeout(async () => {
     const parts = localParts(new Date());
     const dateKey = `${parts.year}-${parts.month}-${parts.day}`;
@@ -68,12 +72,12 @@ function scheduleNextMidnight() {
       lastRunLocalDate = dateKey;
       await runProspecting();
     }
-    scheduleNextMidnight();
+    scheduleNextRun();
   }, delay);
 }
 
 if (enabled) {
-  console.log("[prospecting] Agendador ativo: execução diária à meia-noite de Brasília. Não haverá envio imediato na inicialização/reinicialização do servidor.");
+  console.log("[prospecting] Agendador ativo: execução diária às 10h de Brasília. Não haverá envio imediato na inicialização/reinicialização do servidor.");
   scheduleNextMidnight();
 } else {
   console.log("[prospecting] Agendador pausado por segurança. Exige as três confirmações, PROSPECT_REPLY_TO e RESEND_WEBHOOK_SECRET configurados; teste o recebimento de SAIR antes de ativar.");
