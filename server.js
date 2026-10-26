@@ -28,7 +28,7 @@ const server = http.createServer(async (req, res) => {
       if (!verifyResendWebhook(req.headers, rawBody, process.env.RESEND_WEBHOOK_SECRET)) {
         return json(res, 401, { error: "Assinatura do webhook inválida." });
       }
-      const event = JSON.parse(rawBody);
+      const event = JSON.parse(rawBody.toString("utf8"));
       if (event.type !== "email.received") return json(res, 200, { ok: true, ignored: true });
       const emailId = String(event.data?.email_id || "");
       if (!emailId) return json(res, 400, { error: "Evento sem email_id." });
@@ -224,12 +224,15 @@ const server = http.createServer(async (req, res) => {
 
 
 async function readRequestRaw(req, maxBytes = 100_000) {
-  let raw = "";
+  const chunks = [];
+  let size = 0;
   for await (const chunk of req) {
-    raw += chunk.toString("utf8");
-    if (Buffer.byteLength(raw, "utf8") > maxBytes) throw new Error("Webhook muito grande.");
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    size += buffer.length;
+    if (size > maxBytes) throw new Error("Webhook muito grande.");
+    chunks.push(buffer);
   }
-  return raw;
+  return Buffer.concat(chunks);
 }
 
 function verifyResendWebhook(headers, rawBody, secret) {
