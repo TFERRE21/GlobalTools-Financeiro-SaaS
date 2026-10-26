@@ -73,8 +73,7 @@ function scheduleNextMidnight() {
 }
 
 if (enabled) {
-  console.log("[prospecting] VERSAO CAMPANHA IMEDIATA ATIVA: primeira execução em 15 segundos; próximas execuções diariamente à meia-noite, fuso America/Sao_Paulo.");
-  setTimeout(() => void runProspecting(), 15_000);
+  console.log("[prospecting] Agendador ativo: execução diária à meia-noite de Brasília. Não haverá envio imediato na inicialização/reinicialização do servidor.");
   scheduleNextMidnight();
 } else {
   console.log("[prospecting] Agendador pausado por segurança. Para reativar, confirme deduplicação, histórico/supressões do Resend e processamento de opt-out com as variáveis PROSPECT_AUTORUN=true, PROSPECT_ACK_DUPLICATE_GUARD=true e PROSPECT_OPT_OUT_READY=true.");
