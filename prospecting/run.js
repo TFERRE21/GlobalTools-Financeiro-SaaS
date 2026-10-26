@@ -67,37 +67,38 @@ function mapCompany(row) {
   const name = String(first(row.nome_fantasia, row.razao_social, row.nome, row.name) || "").trim();
   const email = normalizeEmail(first(row.contato?.email, row.email, row.email_contato, row.email_comercial, row.contato_email));
   const openedAt = asDate(first(row.data_inicio, row.data_abertura, row.abertura, row.data_inicio_atividade, row.opening_date));
-  return { cnpj, name, email, openedAt, source: CFO_URL, contactMasked: Boolean(row.contato_mascarado) };
+  return { cnpj, name, email, openedAt, source: CFO_URL, emailSource: CFO_URL, contactMasked: Boolean(row.contato_mascarado) };
 }
 function emailContent(company) {
   const safeName = company.name.replace(/[<>]/g, "").slice(0, 120) || "sua empresa";
+  const openedDate = company.openedAt.toISOString().slice(0, 10).split("-").reverse().join("/");
   const site = SITE_URL;
   const html = `<!doctype html>
 <html lang="pt-BR">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sua empresa começou. Vamos organizar o futuro?</title></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GlobalTools Financeiro — controle financeiro para pequenos negócios</title></head>
 <body style="margin:0;padding:24px 8px;background:#f3f5f7;font-family:Arial,Helvetica,sans-serif;color:#17324a;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;margin:0 auto;background:#ffffff;border-collapse:separate;border-spacing:0;border-radius:12px;overflow:hidden;">
 <tr><td style="background:#112d46;padding:28px 24px 24px;text-align:center;color:#ffffff;">
-<div style="font-size:12px;font-weight:bold;letter-spacing:1.4px;color:#b9f3d3;margin-bottom:16px;">✦ BASE FINANCEIRA</div>
+<div style="font-size:12px;font-weight:bold;letter-spacing:1.4px;color:#b9f3d3;margin-bottom:16px;">✦ GLOBALTOOLS FINANCEIRO · DAYMONEY</div>
 <h1 style="font-size:25px;line-height:1.25;margin:0 0 8px;font-weight:700;color:#ffffff;">Sua empresa começou.<br>Vamos organizar o futuro?</h1>
 <p style="font-size:13px;margin:0;color:#e6edf4;">Parabéns por essa nova conquista! 🎉</p>
 </td></tr>
 <tr><td style="padding:28px 28px 24px;font-size:14px;line-height:1.7;color:#40556a;">
 <p style="margin:0 0 14px;">Olá, empreendedor(a) da <strong style="color:#17324a;">${safeName}</strong>!</p>
 <p style="margin:0 0 14px;">Abrir uma empresa é um passo importante. Desde o primeiro dia, cuidar do dinheiro que entra e sai ajuda você a tomar decisões com mais clareza e confiança.</p>
-<p style="margin:0 0 22px;">A <strong style="color:#17324a;">Base Financeira</strong> foi pensada para ajudar pequenos negócios a manter a rotina financeira mais organizada.</p>
+<p style="margin:0 0 22px;">O <strong style="color:#17324a;">GlobalTools Financeiro</strong> (marca comercial DayMoney) foi pensado para ajudar pequenos negócios a organizar receitas, despesas e fluxo de caixa.</p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
 <tr><td width="38" valign="top" style="padding:0 0 16px;font-size:20px;">📊</td><td style="padding:0 0 16px;"><strong style="display:block;color:#17324a;font-size:14px;">Acompanhe receitas e despesas</strong><span style="font-size:12px;color:#718096;">Tenha uma visão mais clara das movimentações do negócio.</span></td></tr>
 <tr><td width="38" valign="top" style="padding:0 0 16px;font-size:20px;">🗓️</td><td style="padding:0 0 16px;"><strong style="display:block;color:#17324a;font-size:14px;">Organize o fluxo de caixa</strong><span style="font-size:12px;color:#718096;">Planeje pagamentos e acompanhe o saldo com mais praticidade.</span></td></tr>
 <tr><td width="38" valign="top" style="padding:0 0 20px;font-size:20px;">🧭</td><td style="padding:0 0 20px;"><strong style="display:block;color:#17324a;font-size:14px;">Decida com mais segurança</strong><span style="font-size:12px;color:#718096;">Use informações organizadas como apoio à gestão da empresa.</span></td></tr>
 </table>
-<div style="text-align:center;padding:2px 0 18px;"><a href="${site}" style="display:inline-block;background:#07835f;color:#ffffff;text-decoration:none;font-size:14px;font-weight:bold;padding:14px 22px;border-radius:5px;">Conhecer a Base Financeira →</a></div>
+<div style="text-align:center;padding:2px 0 18px;"><a href="${site}" style="display:inline-block;background:#07835f;color:#ffffff;text-decoration:none;font-size:14px;font-weight:bold;padding:14px 22px;border-radius:5px;">Conhecer o GlobalTools Financeiro →</a></div>
 <p style="text-align:center;margin:0;color:#8190a0;font-size:11px;">Organização hoje. Mais clareza para crescer amanhã.</p>
 </td></tr>
-<tr><td style="background:#f7f9fa;border-top:1px solid #e4e9ed;padding:16px 22px;text-align:center;color:#82909d;font-size:10px;line-height:1.6;">Você recebeu este e-mail como demonstração de uma campanha de apresentação da Base Financeira. Se não quiser receber novas mensagens, responda com <strong>SAIR</strong>.<br><br>Base Financeira · Mensagem de demonstração</td></tr>
+<tr><td style="background:#f7f9fa;border-top:1px solid #e4e9ed;padding:16px 22px;text-align:center;color:#82909d;font-size:10px;line-height:1.6;">Esta mensagem comercial foi enviada pela equipe do GlobalTools Financeiro (marca comercial DayMoney) porque uma fonte empresarial pública indica abertura recente de ${safeName} em ${openedDate}. Para não receber novas mensagens, responda <strong>SAIR</strong>.<br><br>Remetente: Base Financeira &lt;financeiro@oolivo.com.br&gt;.</td></tr>
 </table>
 </body></html>`;
-  const text = `BASE FINANCEIRA
+  const text = `GLOBALTOOLS FINANCEIRO · DAYMONEY
 
 Sua empresa começou. Vamos organizar o futuro?
 Parabéns por essa nova conquista!
@@ -106,7 +107,7 @@ Olá, empreendedor(a) da ${safeName}!
 
 Abrir uma empresa é um passo importante. Desde o primeiro dia, cuidar do dinheiro que entra e sai ajuda você a tomar decisões com mais clareza e confiança.
 
-A Base Financeira foi pensada para ajudar pequenos negócios a manter a rotina financeira mais organizada.
+O GlobalTools Financeiro (marca comercial DayMoney) foi pensado para ajudar pequenos negócios a organizar receitas, despesas e fluxo de caixa.
 
 📊 Acompanhe receitas e despesas
 Tenha uma visão mais clara das movimentações do negócio.
@@ -117,13 +118,13 @@ Planeje pagamentos e acompanhe o saldo com mais praticidade.
 🧭 Decida com mais segurança
 Use informações organizadas como apoio à gestão da empresa.
 
-Conhecer a Base Financeira: ${site}
+Conhecer o GlobalTools Financeiro: ${site}
 
 Organização hoje. Mais clareza para crescer amanhã.
 
-Você recebeu este e-mail como demonstração de uma campanha de apresentação da Base Financeira. Se não quiser receber novas mensagens, responda com SAIR.
+Esta mensagem comercial foi enviada pela equipe do GlobalTools Financeiro (marca comercial DayMoney) porque uma fonte empresarial pública indica abertura recente de ${safeName} em ${openedDate}. Para não receber novas mensagens, responda SAIR.
 
-Base Financeira · Mensagem de demonstração`;
+Remetente: Base Financeira <financeiro@oolivo.com.br>.`;
   return { subject: "Sua empresa começou. Vamos organizar o futuro?", html, text };
 }
 
@@ -270,7 +271,7 @@ const candidates = rows.map(mapCompany).filter((c) => {
 console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, companies_found: rows.length, eligible: candidates.length, daily_limit: DAILY_LIMIT, sent_today_before_run: sentToday, remaining_today_before_run: remainingToday }, null, 2));
 let sent = 0;
 for (const company of candidates) {
-  console.log(`CANDIDATE ${JSON.stringify({ name: company.name, cnpj: company.cnpj, openedAt: company.openedAt.toISOString().slice(0, 10), email: company.email, source: company.source })}`);
+  console.log(`CANDIDATE ${JSON.stringify({ name: company.name, cnpj: company.cnpj, openedAt: company.openedAt.toISOString().slice(0, 10), email: company.email, source: company.source, emailSource: company.emailSource || company.source })}`);
   if (!SEND_EMAILS) continue;
   try {
     const id = await sendEmail(company.email, emailContent(company));
