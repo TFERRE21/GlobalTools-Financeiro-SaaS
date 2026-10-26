@@ -156,7 +156,11 @@ async function fetchResendCollection(resource) {
     const payload = await response.json();
     const batch = Array.isArray(payload.data) ? payload.data : [];
     all.push(...batch);
-    if (payload.has_more !== true || batch.length === 0) return all;
+    if (batch.length === 0 || payload.has_more === false) return all;
+    if (payload.has_more !== true) {
+      if (batch.length < 100) return all;
+      throw new Error("Paginação de /" + resource + " ambígua; nenhum envio foi iniciado.");
+    }
     const next = batch[batch.length - 1]?.id;
     if (!next || next === after) throw new Error("Paginação de /" + resource + " inconclusiva; nenhum envio foi iniciado.");
     after = next;
