@@ -23,6 +23,7 @@ if (SEND_EMAILS && !env.PROSPECT_REPLY_TO) {
 const STATE_PATH = path.resolve(env.PROSPECT_STATE_PATH || "./data/prospecting-state.json");
 const SITE_URL = (env.PUBLIC_SITE_URL || "https://daymoney.com.br").replace(/\/$/, "") + "/";
 const CFO_URL = env.CFO_API_URL || "https://cfo.com.br/api";
+const cfoQuotaHeaders = {};
 const RESEND_FROM = env.RESEND_FROM || "Base Financeira <financeiro@oolivo.com.br>";
 
 const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
@@ -352,7 +353,7 @@ const filteredCandidates = mappedRows.filter((c, index) => {
 filterCounts.eligible_before_limit = filteredCandidates.length;
 const candidates = filteredCandidates.slice(0, remainingToday);
 
-console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, target_opening_dates: [...targetOpeningDates], target_opening_date: targetOpeningDate, companies_found: rows.length, filter_counts: filterCounts, invalid_reasons: invalidReasons, contact_mask_values: contactMaskValues, invalid_examples: invalidExamples, eligible: candidates.length, daily_limit: DAILY_LIMIT, sent_today_before_run: sentToday, remaining_today_before_run: remainingToday }, null, 2));
+console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, target_opening_dates: [...targetOpeningDates], target_opening_date: targetOpeningDate, companies_found: rows.length, cfo_quota_headers: cfoQuotaHeaders, filter_counts: filterCounts, invalid_reasons: invalidReasons, contact_mask_values: contactMaskValues, invalid_examples: invalidExamples, eligible: candidates.length, daily_limit: DAILY_LIMIT, sent_today_before_run: sentToday, remaining_today_before_run: remainingToday }, null, 2));
 let sent = 0;
 for (const company of candidates) {
   console.log(`CANDIDATE ${JSON.stringify({ name: company.name, cnpj: company.cnpj, openedAt: company.openedAt.toISOString().slice(0, 10), email: company.email, source: company.source, emailSource: company.emailSource || company.source })}`);
