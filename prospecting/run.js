@@ -255,6 +255,8 @@ if (resendSafety.recentIssues || resendSafety.recentBadSuppressions) {
 const rows = await fetchCompanies();
 const today = localDateKey(new Date());
 const targetOpeningDate = previousBusinessDayKey(new Date());
+const requestedTargetDates = String(env.PROSPECT_TARGET_DATES || "").split(",").map((value) => value.trim()).filter((value) => /^\\d{4}-\\d{2}-\\d{2}$/.test(value));
+const targetOpeningDates = new Set(requestedTargetDates.length ? requestedTargetDates : [targetOpeningDate]);
 const sentToday = Object.values(state.sent).filter((item) => item.sentAt && !Number.isNaN(Date.parse(item.sentAt)) && localDateKey(new Date(item.sentAt)) === today).length;
 const remainingToday = Math.max(0, DAILY_LIMIT - sentToday);
 const legacyPreviouslySent = new Set([
@@ -286,16 +288,16 @@ const candidates = rows.map(mapCompany).filter((c) => {
   if (!c.cnpj || c.cnpj.length !== 14 || !c.name || !validEmail(c.email) || !c.openedAt || c.contactMasked) return false;
   if (isPersonalMailbox(c.email)) return false;
   if (knownSentEmails.has(c.email) || knownSuppressedEmails.has(c.email) || knownSentCnpjs.has(c.cnpj)) return false;
-  // Processa somente empresas abertas no dia útil imediatamente anterior.
-  // Segunda-feira considera sexta-feira; sábado/domingo são ignorados.
-  if (localDateKey(c.openedAt) !== targetOpeningDate) return false;
+  // Por padrão processa o dia útil imediatamente anterior. Para uma busca retroativa pontual,
+  // PROSPECT_TARGET_DATES aceita datas YYYY-MM-DD separadas por vírgula.
+  if (!targetOpeningDates.has(localDateKey(c.openedAt))) return false;
   if (seenEmails.has(c.email) || seenCnpjs.has(c.cnpj)) return false;
   seenEmails.add(c.email);
   seenCnpjs.add(c.cnpj);
   return true;
 }).slice(0, remainingToday);
 
-console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, target_opening_date: targetOpeningDate, companies_found: rows.length, eligible: candidates.length, daily_limit: DAILY_LIMIT, sent_today_before_run: sentToday, remaining_today_before_run: remainingToday }, null, 2));
+console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, target_opening_dates: [...targetOpeningDates], target_opening_date: targetOpeningDate, companies_found: rows.length, eligible: candidates.length, daily_limit: DAILY_LIMIT, sent_today_before_run: sentToday, remaining_today_before_run: remainingToday }, null, 2));
 let sent = 0;
 for (const company of candidates) {
   console.log(`CANDIDATE ${JSON.stringify({ name: company.name, cnpj: company.cnpj, openedAt: company.openedAt.toISOString().slice(0, 10), email: company.email, source: company.source, emailSource: company.emailSource || company.source })}`);
@@ -314,4 +316,4 @@ for (const company of candidates) {
   }
 }
 await saveState(state);
-console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", target_opening_date: targetOpeningDate, eligible: candidates.length, sent, daily_limit: DAILY_LIMIT, sent_today_total: sentToday + sent, state_file: STATE_PATH }, null, 2));
+console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", target_opening_dates: [...targetOpeningDates], target_opening_date: targetOpeningDate, eligible: candidates.length, sent, daily_limit: DAILY_LIMIT, sent_today_total: sentToday + sent, state_file: STATE_PATH }, null, 2));
