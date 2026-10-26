@@ -246,7 +246,8 @@ function verifyResendWebhook(headers, rawBody, secret) {
   try {
     const encodedSecret = String(secret).replace(/^whsec_/, "");
     const key = Buffer.from(encodedSecret, "base64");
-    const expected = createHmac("sha256", key).update(id + "." + timestamp + "." + rawBody).digest("base64");
+    const signedPayload = Buffer.concat([Buffer.from(id + "." + timestamp + "."), Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(String(rawBody))]);
+    const expected = createHmac("sha256", key).update(signedPayload).digest("base64");
     return signatureHeader.split(" ").some((entry) => {
       const [version, value] = entry.split(",");
       if (version !== "v1" || !value) return false;
