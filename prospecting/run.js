@@ -284,21 +284,25 @@ const knownSuppressedEmails = new Set([
 const knownSentCnpjs = new Set(Object.values(state.sent).map((item) => String(item.cnpj || "")));
 const seenEmails = new Set();
 const seenCnpjs = new Set();
-const candidates = rows.map(mapCompany).filter((c) => {
+const filterCounts = { invalid_data: 0, personal_email: 0, already_sent_or_suppressed: 0, opening_date_outside_target: 0, duplicate_in_batch: 0, eligible_before_limit: 0 };
+const mappedRows = rows.map(mapCompany);
+const filteredCandidates = mappedRows.filter((c) => {
   c.email = normalizeEmail(c.email);
-  if (!c.cnpj || c.cnpj.length !== 14 || !c.name || !validEmail(c.email) || !c.openedAt || c.contactMasked) return false;
-  if (isPersonalMailbox(c.email)) return false;
-  if (knownSentEmails.has(c.email) || knownSuppressedEmails.has(c.email) || knownSentCnpjs.has(c.cnpj)) return false;
+  if (!c.cnpj || c.cnpj.length !== 14 || !c.name || !validEmail(c.email) || !c.openedAt || c.contactMasked) { filterCounts.invalid_data++; return false; }
+  if (isPersonalMailbox(c.email)) { filterCounts.personal_email++; return false; }
+  if (knownSentEmails.has(c.email) || knownSuppressedEmails.has(c.email) || knownSentCnpjs.has(c.cnpj)) { filterCounts.already_sent_or_suppressed++; return false; }
   // Por padrão processa o dia útil imediatamente anterior. Para uma busca retroativa pontual,
   // PROSPECT_TARGET_DATES aceita datas YYYY-MM-DD separadas por vírgula.
-  if (!targetOpeningDates.has(localDateKey(c.openedAt))) return false;
-  if (seenEmails.has(c.email) || seenCnpjs.has(c.cnpj)) return false;
+  if (!targetOpeningDates.has(localDateKey(c.openedAt))) { filterCounts.opening_date_outside_target++; return false; }
+  if (seenEmails.has(c.email) || seenCnpjs.has(c.cnpj)) { filterCounts.duplicate_in_batch++; return false; }
   seenEmails.add(c.email);
   seenCnpjs.add(c.cnpj);
   return true;
-}).slice(0, remainingToday);
+});
+filterCounts.eligible_before_limit = filteredCandidates.length;
+const candidates = filteredCandidates.slice(0, remainingToday);
 
-console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, target_opening_dates: [...targetOpeningDates], target_opening_date: targetOpeningDate, companies_found: rows.length, eligible: candidates.length, daily_limit: DAILY_LIMIT, sent_today_before_run: sentToday, remaining_today_before_run: remainingToday }, null, 2));
+console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, target_opening_dates: [...targetOpeningDates], target_opening_date: targetOpeningDate, companies_found: rows.length, filter_counts: filterCounts, eligible: candidates.length, daily_limit: DAILY_LIMIT, sent_today_before_run: sentToday, remaining_today_before_run: remainingToday }, null, 2));
 let sent = 0;
 for (const company of candidates) {
   console.log(`CANDIDATE ${JSON.stringify({ name: company.name, cnpj: company.cnpj, openedAt: company.openedAt.toISOString().slice(0, 10), email: company.email, source: company.source, emailSource: company.emailSource || company.source })}`);
