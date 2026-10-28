@@ -253,8 +253,11 @@ async function loadResendSafetyState() {
     const createdAt = Date.parse(item.created_at || "");
     return ["bounce", "complaint"].includes(origin) && (!Number.isFinite(createdAt) || createdAt >= cutoff);
   });
-  if (SEND_EMAILS && (recentIssues.length > 0 || recentBadSuppressions.length > 0)) {
-    throw new Error("Envio pausado: o histórico recente do Resend contém " + recentIssues.length + " mensagem(ns) com falha/bounce/reclamação e " + recentBadSuppressions.length + " supressão(ões) recente(s) por bounce/reclamação.");
+  if (SEND_EMAILS && recentIssues.length > 0) {
+    throw new Error("Envio pausado: o histórico recente do Resend contém " + recentIssues.length + " mensagem(ns) com falha/bounce/reclamação. Revise o histórico antes de retomar.");
+  }
+  if (SEND_EMAILS && recentBadSuppressions.length > 0) {
+    console.warn("[prospecting] ALERTA: " + recentBadSuppressions.length + " supressão(ões) recente(s) por bounce/reclamação. Os endereços suprimidos continuarão bloqueados individualmente; o restante da lista será processado.");
   }
   const previouslySent = new Set();
   for (const item of history) {
