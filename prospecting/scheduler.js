@@ -26,8 +26,9 @@ function millisecondsUntilNextRun() {
     Number(parts.year), Number(parts.month) - 1, Number(parts.day),
     Number(parts.hour), Number(parts.minute)
   );
-  const targetHour = 10;
-  const targetTodayAsUtc = todayAtLocalMidnightAsUtc + targetHour * 60 * 60 * 1000;
+  const targetHour = 8;
+  const targetMinute = 30;
+  const targetTodayAsUtc = todayAtLocalMidnightAsUtc + targetHour * 60 * 60 * 1000 + targetMinute * 60 * 1000;
   const nextLocalTargetAsUtc = representedNowAsUtc < targetTodayAsUtc
     ? targetTodayAsUtc
     : targetTodayAsUtc + 24 * 60 * 60 * 1000;
@@ -64,7 +65,7 @@ async function runProspecting() {
 function scheduleNextRun() {
   const delay = millisecondsUntilNextRun();
   const next = new Date(Date.now() + delay);
-  console.log(`[prospecting] Próxima execução agendada para 10h de Brasília; em aproximadamente ${Math.round(delay / 60000)} minutos (estimativa ${next.toISOString()}).`);
+  console.log(`[prospecting] Próxima execução agendada para 08h30 de Brasília; em aproximadamente ${Math.round(delay / 60000)} minutos (estimativa ${next.toISOString()}).`);
   setTimeout(async () => {
     const parts = localParts(new Date());
     const dateKey = `${parts.year}-${parts.month}-${parts.day}`;
@@ -77,7 +78,7 @@ function scheduleNextRun() {
 }
 
 if (enabled) {
-  console.log("[prospecting] Agendador ativo: execução imediata na inicialização e depois diariamente às 10h de Brasília.");
+  console.log("[prospecting] Agendador ativo: execução imediata na inicialização e depois diariamente às 08h30 de Brasília.");
   runProspecting().finally(() => scheduleNextRun());
 } else {
   console.log("[prospecting] Agendador pausado por segurança. Exige as três confirmações, PROSPECT_REPLY_TO e RESEND_WEBHOOK_SECRET configurados; teste o recebimento de SAIR antes de ativar.");
