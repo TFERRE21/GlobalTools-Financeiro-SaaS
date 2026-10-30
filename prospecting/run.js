@@ -246,7 +246,9 @@ async function loadResendSafetyState() {
     const status = String(item.status || "").toLowerCase();
     const createdAt = Date.parse(item.created_at || item.createdAt || "");
     const recent = !Number.isFinite(createdAt) || createdAt >= cutoff;
-    return recent && ["failed", "bounced", "complained", "suppressed"].includes(status);
+    // Falhas e reclamações recentes exigem pausa global; bounce/suppressed são tratados
+    // por destinatário via lista de supressões do Resend, sem parar toda a campanha.
+    return recent && ["failed", "complained"].includes(status);
   });
   const recentBadSuppressions = suppressions.filter((item) => {
     const origin = String(item.origin || "").toLowerCase();
