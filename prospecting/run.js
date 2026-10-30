@@ -352,6 +352,8 @@ const filterCounts = { invalid_data: 0, personal_email: 0, already_sent_or_suppr
 const invalidReasons = { cnpj_missing_or_invalid: 0, name_missing: 0, email_missing_or_invalid: 0, opening_date_missing_or_invalid: 0, contact_masked: 0 };
 const invalidExamples = [];
 const contactMaskValues = {};
+const sourceShapeSamples = rows.slice(0, 3).map((row) => ({ top_level_keys: Object.keys(row || {}).sort(), contact_keys: Object.keys(row?.contato || {}).sort(), email_fields: { contato_email_type: typeof row?.contato?.email, email_type: typeof row?.email, email_contato_type: typeof row?.email_contato, email_comercial_type: typeof row?.email_comercial, contato_email_type: typeof row?.contato_email }, mask_fields: Object.keys(row || {}).filter((key) => /mascar|reveal|contato|email/i.test(key)).sort() }));
+const matchDiagnostics = { sent_email: 0, suppressed_email: 0, sent_cnpj: 0, matched_multiple_reasons: 0 };
 const mappedRows = rows.map((row) => {
   const mapped = mapCompany(row);
   const raw = row.contato_mascarado;
@@ -377,7 +379,17 @@ const filteredCandidates = mappedRows.filter((c, index) => {
     return false;
   }
   // Não descartar contato válido apenas porque usa Gmail/Hotmail; duplicidade e descadastro seguem bloqueados.
-  if (knownSentEmails.has(c.email) || knownSuppressedEmails.has(c.email) || knownSentCnpjs.has(c.cnpj)) { filterCounts.already_sent_or_suppressed++; return false; }
+  const matchedSentEmail = knownSentEmails.has(c.email);
+  const matchedSuppressedEmail = knownSuppressedEmails.has(c.email);
+  const matchedSentCnpj = knownSentCnpjs.has(c.cnpj);
+  if (matchedSentEmail || matchedSuppressedEmail || matchedSentCnpj) {
+    filterCounts.already_sent_or_suppressed++;
+    if (matchedSentEmail) matchDiagnostics.sent_email++;
+    if (matchedSuppressedEmail) matchDiagnostics.suppressed_email++;
+    if (matchedSentCnpj) matchDiagnostics.sent_cnpj++;
+    if ([matchedSentEmail, matchedSuppressedEmail, matchedSentCnpj].filter(Boolean).length > 1) matchDiagnostics.matched_multiple_reasons++;
+    return false;
+  }
   // Por padrão processa o dia útil imediatamente anterior. Para uma busca retroativa pontual,
   // PROSPECT_TARGET_DATES aceita datas YYYY-MM-DD separadas por vírgula.
   if (!targetOpeningDates.has(localDateKey(c.openedAt))) { filterCounts.opening_date_outside_target++; return false; }
@@ -389,7 +401,7 @@ const filteredCandidates = mappedRows.filter((c, index) => {
 filterCounts.eligible_before_limit = filteredCandidates.length;
 const candidates = filteredCandidates.slice(0, remainingToday);
 
-console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, target_opening_dates: [...targetOpeningDates], target_opening_date: targetOpeningDate, companies_found: rows.length, cfo_quota_headers: cfoQuotaHeaders, cfo_meta: cfoMeta, quota_pause_reason: quotaPauseReason || null, plan_daily_budgets: { searches: DAILY_SEARCH_BUDGET, leads: DAILY_LEAD_BUDGET, email_send_limit: DAILY_LIMIT, max_search_pages_this_run: Math.max(1, Math.min(Math.max(1, Math.min(20, Number(env.CFO_MAX_PAGES || 10))), DAILY_SEARCH_BUDGET)) }, filter_counts: filterCounts, invalid_reasons: invalidReasons, contact_mask_values: contactMaskValues, invalid_examples: invalidExamples, eligible: candidates.length, daily_limit: DAILY_LIMIT, sent_today_before_run: sentToday, remaining_today_before_run: remainingToday }, null, 2));
+console.log(JSON.stringify({ mode: SEND_EMAILS ? "SEND" : "DRY_RUN", source: CFO_URL, target_opening_dates: [...targetOpeningDates], target_opening_date: targetOpeningDate, companies_found: rows.length, cfo_quota_headers: cfoQuotaHeaders, cfo_meta: cfoMeta, quota_pause_reason: quotaPauseReason || null, plan_daily_budgets: { searches: DAILY_SEARCH_BUDGET, leads: DAILY_LEAD_BUDGET, email_send_limit: DAILY_LIMIT, max_search_pages_this_run: Math.max(1, Math.min(Math.max(1, Math.min(20, Number(env.CFO_MAX_PAGES || 10))), DAILY_SEARCH_BUDGET)) }, filter_counts: filterCounts, match_diagnostics: matchDiagnostics, known_lists_sizes: { resend_sent_emails: resendSafety.previouslySent.size, resend_suppressions: resendSafety.suppressed.size, local_sent_emails: Object.keys(state.sent).length, local_suppressed_emails: Object.keys(state.suppressed).length, legacy_blocked_emails: legacyPreviouslySent.size, local_sent_cnpjs: knownSentCnpjs.size }, invalid_reasons: invalidReasons, contact_mask_values: contactMaskValues, source_shape_samples: sourceShapeSamples, invalid_examples: invalidExamples, eligible: candidates.length, daily_limit: DAILY_LIMIT, sent_today_before_run: sentToday, remaining_today_before_run: remainingToday }, null, 2));
 let sent = 0;
 for (const company of candidates) {
   console.log(`CANDIDATE ${JSON.stringify({ name: company.name, cnpj: company.cnpj, openedAt: company.openedAt.toISOString().slice(0, 10), email: company.email, source: company.source, emailSource: company.emailSource || company.source })}`);
